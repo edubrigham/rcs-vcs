@@ -23,9 +23,8 @@ const SECTION_BLURBS: Record<string, string> = {
   "xPlatform s11": "Use concise copy with one primary action and up to three suggestions/replies.",
   "xPlatform s13": "Prefer the Tall card format for stronger cross-platform consistency.",
   "xPlatform s15": "Long text increases Android crop pressure and layout risk.",
-  "xPlatform s15-s16": "Use a framing that keeps critical media content visible across crops.",
+  "xPlatform s16": "Keep critical media subject matter inside the central safe area.",
   "xPlatform s17": "Keep suggestion count and labels constrained for reliable display.",
-  "xPlatform s17-s18": "Avoid mixing rich-card suggestions and follow-up suggestion sets in one turn.",
   "xPlatform s18": "Suggestion sets can be transient on Android between turns.",
   "xPlatform s21": "Action/reply ordering varies by platform; preserve CTA intent explicitly.",
   "xPlatform s23": "Prevent text overflow that hides CTA actions.",
@@ -38,22 +37,67 @@ const SECTION_BLURBS: Record<string, string> = {
 };
 
 function buildDisplayTitle(label: string): string {
-  const formatSlideRange = (value: string): string => {
-    const [start, end] = value.split("-");
-    return end ? `${start} - ${end}` : start;
-  };
-
-  const xPlatformMatch = label.match(/^xPlatform\s+s(\d+(?:-\d+)?)$/i);
+  const xPlatformMatch = label.match(/^xPlatform\s+s(\d+)$/i);
   if (xPlatformMatch) {
-    return `xPlatform Playbook - slide ${formatSlideRange(xPlatformMatch[1])}`;
+    return `xPlatform Playbook - slide ${xPlatformMatch[1]}`;
   }
 
-  const cardMediaMatch = label.match(/^Card Media\s+p(\d+(?:-\d+)?)$/i);
+  const cardMediaMatch = label.match(/^Card Media\s+p(\d+)$/i);
   if (cardMediaMatch) {
-    return `Card Media Playbook - slide ${formatSlideRange(cardMediaMatch[1])}`;
+    return `Card Media Playbook - slide ${cardMediaMatch[1]}`;
   }
 
   return label;
+}
+
+function citationPage(label: string): string | null {
+  const xPlatformMatch = label.match(/^xPlatform\s+s(\d+)$/i);
+  if (xPlatformMatch) return xPlatformMatch[1];
+  const cardMediaMatch = label.match(/^Card Media\s+p(\d+)$/i);
+  if (cardMediaMatch) return cardMediaMatch[1];
+  return null;
+}
+
+function expandRangeLabel(label: string): string[] {
+  const xPlatformRange = label.match(/^xPlatform\s+s(\d+)-(\d+)$/i);
+  if (xPlatformRange) {
+    const start = Number(xPlatformRange[1]);
+    const end = Number(xPlatformRange[2]);
+    if (!Number.isNaN(start) && !Number.isNaN(end) && end >= start) {
+      return Array.from({ length: end - start + 1 }, (_, i) => `xPlatform s${start + i}`);
+    }
+  }
+
+  const cardMediaRange = label.match(/^Card Media\s+p(\d+)-(\d+)$/i);
+  if (cardMediaRange) {
+    const start = Number(cardMediaRange[1]);
+    const end = Number(cardMediaRange[2]);
+    if (!Number.isNaN(start) && !Number.isNaN(end) && end >= start) {
+      return Array.from({ length: end - start + 1 }, (_, i) => `Card Media p${start + i}`);
+    }
+  }
+
+  return [label];
+}
+
+export function citationsFromLabels(labels: string[]): RecommendationCitation[] {
+  const expanded = labels.flatMap(expandRangeLabel);
+  const deduped = Array.from(new Set(expanded));
+
+  return deduped
+    .filter((label) => label in SECTION_BLURBS)
+    .map((label) => {
+      const key: SourceDocKey = label.startsWith("Card Media") ? "Card Media" : "xPlatform";
+      const source = SOURCE_DOCS[key];
+      const page = citationPage(label);
+      return {
+        label,
+        title: source.title,
+        url: page ? `${source.url}#page=${page}` : source.url,
+        description: SECTION_BLURBS[label],
+        displayTitle: buildDisplayTitle(label),
+      };
+    });
 }
 
 export function parseRecommendationCitations(message: string): {
@@ -87,19 +131,7 @@ export function parseRecommendationCitations(message: string): {
     return currentDoc ? `${currentDoc} ${token}` : token;
   });
 
-  const citations = normalizedLabels
-    .filter((label) => label in SECTION_BLURBS)
-    .map((label) => {
-      const key: SourceDocKey = label.startsWith("Card Media") ? "Card Media" : "xPlatform";
-      const source = SOURCE_DOCS[key];
-      return {
-        label,
-        title: source.title,
-        url: source.url,
-        description: SECTION_BLURBS[label],
-        displayTitle: buildDisplayTitle(label),
-      };
-    });
+  const citations = citationsFromLabels(normalizedLabels);
 
   return { text, citations };
 }

@@ -30,6 +30,7 @@ import type {
   RcsContent,
 } from "@/types/rcs";
 import SafeZoneOverlay from "@/components/SafeZoneOverlay";
+import InlineSlideCitation from "@/components/InlineSlideCitation";
 
 interface RcsCardPreviewProps {
   content: RcsContent;
@@ -172,7 +173,8 @@ export default function RcsCardPreview({
     secondaryActions.length > 0 ? (
       <p className="mt-1.5 px-1 font-mono text-[9px] leading-snug text-amber-600">
         ⚠ {secondaryActions.length} suggestion{secondaryActions.length > 1 ? "s" : ""} moved to a
-        follow-up message (xPlatform s17-s18)
+        follow-up message{" "}
+        <InlineSlideCitation labels={["xPlatform s17", "xPlatform s18"]} />
       </p>
     ) : null;
 
@@ -272,12 +274,15 @@ export default function RcsCardPreview({
         {iosTappableOverflow && (
           <p className="mt-1.5 px-1 font-mono text-[9px] leading-snug text-rose-500">
             ⚠ &gt;6 text lines: card opens a separate full-text page without media or buttons
-            (xPlatform s23)
+            <span className="ml-1">
+              <InlineSlideCitation labels={["xPlatform s23"]} />
+            </span>
           </p>
         )}
         {collapsed && (
           <p className="mt-1 px-1 font-mono text-[9px] text-muted">
-            {ctas.length} actions collapse into the Options dropdown on iOS (xPlatform s42)
+            {ctas.length} actions collapse into the Options dropdown on iOS{" "}
+            <InlineSlideCitation labels={["xPlatform s42"]} />
           </p>
         )}
         {movedActionsNote}
@@ -349,7 +354,8 @@ export default function RcsCardPreview({
 
       {rules.cropSeverity !== "low" && (
         <p className="mt-1.5 px-1 font-mono text-[9px] leading-snug text-amber-600">
-          ⚠ {rules.cropSeverity} crop: long text shrinks the media area (xPlatform s15)
+          ⚠ {rules.cropSeverity} crop: long text shrinks the media area{" "}
+          <InlineSlideCitation labels={["xPlatform s15"]} />
         </p>
       )}
       {movedActionsNote}

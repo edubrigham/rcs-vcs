@@ -13,10 +13,15 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 type InlineCitationCardContextValue = {
   open: boolean;
   setOpen: (open: boolean) => void;
+  scheduleClose: () => void;
+  cancelClose: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  popoverRef: React.RefObject<HTMLDivElement | null>;
 };
 
 const InlineCitationCardContext = createContext<InlineCitationCardContextValue | null>(null);
@@ -52,6 +57,8 @@ export function InlineCitationCard(props: ComponentProps<"span">) {
   const cardId = useId();
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   function clearCloseTimer() {
     if (closeTimerRef.current) {
@@ -67,10 +74,10 @@ export function InlineCitationCard(props: ComponentProps<"span">) {
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current) return;
-      if (!rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      const target = event.target as Node;
+      const isInsideTriggerArea = rootRef.current?.contains(target);
+      const isInsidePopover = popoverRef.current?.contains(target);
+      if (!isInsideTriggerArea && !isInsidePopover) setOpen(false);
     }
 
     function onEscape(event: KeyboardEvent) {
@@ -108,6 +115,10 @@ export function InlineCitationCard(props: ComponentProps<"span">) {
           clearCloseTimer();
           setOpen(nextOpen);
         },
+        scheduleClose,
+        cancelClose: clearCloseTimer,
+        triggerRef,
+        popoverRef,
       }}
     >
       <span
@@ -133,6 +144,9 @@ export function InlineCitationCardTrigger({
 }: ComponentProps<"button"> & { sources: string[] }) {
   const ctx = useContext(InlineCitationCardContext);
   if (!ctx) throw new Error("InlineCitationCardTrigger must be used inside InlineCitationCard.");
+  // Destructured aliases keep the react-hooks/refs rule happy: the ref object
+  // is passed along, never read (.current) during render.
+  const { open, setOpen, triggerRef } = ctx;
 
   const label = useMemo(() => {
     if (sources.length === 0) return "source";
@@ -144,20 +158,21 @@ export function InlineCitationCardTrigger({
   return (
     <button
       type="button"
+      ref={triggerRef}
       {...props}
       onMouseEnter={(event) => {
         props.onMouseEnter?.(event);
-        ctx.setOpen(true);
+        setOpen(true);
       }}
       onClick={(event) => {
         props.onClick?.(event);
-        ctx.setOpen(!ctx.open);
+        setOpen(!open);
       }}
       onFocus={(event) => {
         props.onFocus?.(event);
-        ctx.setOpen(true);
+        setOpen(true);
       }}
-      className={`rounded-full border border-line bg-white px-2 py-0.5 font-sans text-[10px] font-semibold text-zinc-700 shadow-sm transition hover:border-line-strong hover:bg-zinc-50 ${ctx.open ? "border-line-strong bg-zinc-50" : ""} ${props.className ?? ""}`}
+      className={`rounded-full border border-line bg-white px-2 py-0.5 font-sans text-[10px] font-semibold text-zinc-700 shadow-sm transition hover:border-line-strong hover:bg-zinc-50 ${open ? "border-line-strong bg-zinc-50" : ""} ${props.className ?? ""}`}
     >
       {label}
     </button>
@@ -167,13 +182,64 @@ export function InlineCitationCardTrigger({
 export function InlineCitationCardBody(props: ComponentProps<"div">) {
   const ctx = useContext(InlineCitationCardContext);
   if (!ctx) throw new Error("InlineCitationCardBody must be used inside InlineCitationCard.");
-  if (!ctx.open) return null;
+  // Destructure after the guard: the null-check doesn't narrow `ctx` inside
+  // the nested closure below, but these consts stay narrowed.
+  const { open, triggerRef, popoverRef, cancelClose, scheduleClose } = ctx;
 
-  return (
+  const [coords, setCoords] = useState({ left: 8, top: 8, width: 320 });
+
+  useEffect(() => {
+    if (!open) return;
+
+    function updatePosition() {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const margin = 8;
+      const desiredWidth = Math.min(380, Math.floor(window.innerWidth * 0.64));
+      const width = Math.max(260, desiredWidth);
+      const estimatedHeight = 240;
+
+      let left = rect.left;
+      if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
+      if (left < margin) left = margin;
+
+      let top = rect.bottom + 8;
+      if (top + estimatedHeight > window.innerHeight - margin) {
+        top = Math.max(margin, rect.top - estimatedHeight - 8);
+      }
+
+      setCoords({ left, top, width });
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, triggerRef]);
+
+  if (!open) return null;
+
+  return createPortal(
     <div
       {...props}
-      className={`absolute left-0 top-[calc(100%+8px)] z-30 w-[min(380px,64vw)] min-h-[200px] rounded-2xl border border-line bg-white p-2.5 font-sans text-zinc-900 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.35)] ${props.className ?? ""}`}
-    />
+      ref={popoverRef}
+      onMouseEnter={(event) => {
+        props.onMouseEnter?.(event);
+        cancelClose();
+      }}
+      onMouseLeave={(event) => {
+        props.onMouseLeave?.(event);
+        scheduleClose();
+      }}
+      className={`fixed z-[120] min-h-[200px] rounded-2xl border border-line bg-white p-2.5 font-sans text-zinc-900 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.35)] ${props.className ?? ""}`}
+      style={{ left: `${coords.left}px`, top: `${coords.top}px`, width: `${coords.width}px` }}
+    />,
+    document.body,
   );
 }
 

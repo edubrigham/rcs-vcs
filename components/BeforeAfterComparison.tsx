@@ -7,20 +7,7 @@
  */
 
 import { scoreTone } from "@/components/ScorePanel";
-import {
-  InlineCitation,
-  InlineCitationCard,
-  InlineCitationCardBody,
-  InlineCitationCardTrigger,
-  InlineCitationCarousel,
-  InlineCitationCarouselContent,
-  InlineCitationCarouselHeader,
-  InlineCitationCarouselIndex,
-  InlineCitationCarouselItem,
-  InlineCitationCarouselNext,
-  InlineCitationCarouselPrev,
-  InlineCitationSource,
-} from "@/components/ai-elements/inline-citation";
+import InlineSlideCitation from "@/components/InlineSlideCitation";
 import PlatformPreview from "@/components/PlatformPreview";
 import RcsCardPreview from "@/components/RcsCardPreview";
 import { parseRecommendationCitations } from "@/lib/recommendationCitations";
@@ -128,33 +115,7 @@ export default function BeforeAfterComparison({
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <span>{row.text}</span>
                 {row.citations.length > 0 ? (
-                  <InlineCitation>
-                    <InlineCitationCard>
-                      <InlineCitationCardTrigger
-                        sources={row.citations.map((citation) => citation.url)}
-                      />
-                      <InlineCitationCardBody>
-                        <InlineCitationCarousel>
-                          <InlineCitationCarouselHeader>
-                            <InlineCitationCarouselPrev />
-                            <InlineCitationCarouselNext />
-                            <InlineCitationCarouselIndex />
-                          </InlineCitationCarouselHeader>
-                          <InlineCitationCarouselContent>
-                            {row.citations.map((citation) => (
-                              <InlineCitationCarouselItem key={`${citation.url}-${citation.label}`}>
-                                <InlineCitationSource
-                                  title={citation.displayTitle}
-                                  url={citation.url}
-                                  description={citation.description}
-                                />
-                              </InlineCitationCarouselItem>
-                            ))}
-                          </InlineCitationCarouselContent>
-                        </InlineCitationCarousel>
-                      </InlineCitationCardBody>
-                    </InlineCitationCard>
-                  </InlineCitation>
+                  <InlineSlideCitation labels={row.citations.map((citation) => citation.label)} />
                 ) : null}
               </div>
             </li>

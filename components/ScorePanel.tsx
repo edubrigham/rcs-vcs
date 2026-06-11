@@ -6,20 +6,7 @@
  */
 
 import type { ScoreResult, Warning } from "@/types/rcs";
-import {
-  InlineCitation,
-  InlineCitationCard,
-  InlineCitationCardBody,
-  InlineCitationCardTrigger,
-  InlineCitationCarousel,
-  InlineCitationCarouselContent,
-  InlineCitationCarouselHeader,
-  InlineCitationCarouselIndex,
-  InlineCitationCarouselItem,
-  InlineCitationCarouselNext,
-  InlineCitationCarouselPrev,
-  InlineCitationSource,
-} from "@/components/ai-elements/inline-citation";
+import InlineSlideCitation from "@/components/InlineSlideCitation";
 import { parseRecommendationCitations } from "@/lib/recommendationCitations";
 
 export function scoreTone(score: number): string {
@@ -38,12 +25,6 @@ const SEVERITY_STYLE: Record<Warning["severity"], { dot: string; label: string }
   critical: { dot: "bg-[var(--color-destructive)]", label: "text-[var(--color-destructive)]" },
   warning: { dot: "bg-[var(--color-accent)]", label: "text-[var(--color-accent)]" },
   info: { dot: "bg-[var(--color-primary)]", label: "text-[var(--color-primary)]" },
-};
-
-const PLATFORM_LABEL: Record<Warning["platform"], string> = {
-  ios: "iOS",
-  android: "Android",
-  both: "Both",
 };
 
 export default function ScorePanel({ score }: { score: ScoreResult }) {
@@ -195,33 +176,7 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       <span>{parsed.text}</span>
                       {parsed.citations.length > 0 ? (
-                        <InlineCitation>
-                          <InlineCitationCard>
-                            <InlineCitationCardTrigger
-                              sources={parsed.citations.map((citation) => citation.url)}
-                            />
-                            <InlineCitationCardBody>
-                              <InlineCitationCarousel>
-                                <InlineCitationCarouselHeader>
-                                  <InlineCitationCarouselPrev />
-                                  <InlineCitationCarouselNext />
-                                  <InlineCitationCarouselIndex />
-                                </InlineCitationCarouselHeader>
-                                <InlineCitationCarouselContent>
-                                  {parsed.citations.map((citation) => (
-                                    <InlineCitationCarouselItem key={`${citation.url}-${citation.label}`}>
-                                      <InlineCitationSource
-                                        title={citation.displayTitle}
-                                        url={citation.url}
-                                        description={citation.description}
-                                      />
-                                    </InlineCitationCarouselItem>
-                                  ))}
-                                </InlineCitationCarouselContent>
-                              </InlineCitationCarousel>
-                            </InlineCitationCardBody>
-                          </InlineCitationCard>
-                        </InlineCitation>
+                        <InlineSlideCitation labels={parsed.citations.map((citation) => citation.label)} />
                       ) : null}
                     </div>
                   </li>

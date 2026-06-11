@@ -38,7 +38,7 @@ export default function ImprovePage() {
             Naxai · RCS Lab
           </p>
           <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
-            Improvement Studio
+            RCS Visual Compatibility Simulator
           </h1>
         </div>
         <StepNav />
