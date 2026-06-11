@@ -59,10 +59,18 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
         const saved = JSON.parse(raw);
         if (saved.content) {
           const savedContent = saved.content as RcsContent;
-          if (savedContent.imageUrl?.startsWith("blob:")) {
-            // blob: URLs don't survive a reload — drop the dead reference.
-            savedContent.imageUrl = null;
-            savedContent.imageMetadata = undefined;
+          if (
+            !savedContent.imageUrl ||
+            savedContent.imageUrl.startsWith("blob:") ||
+            !savedContent.imageMetadata
+          ) {
+            // Uploaded images are blob: URLs that die on reload (and older
+            // saves may carry a dropped/imageless state). Fall back to the
+            // bundled sample so a restored session never renders empty —
+            // the user can simply re-upload their file.
+            savedContent.imageUrl = DEFAULT_CONTENT.imageUrl;
+            savedContent.imageMetadata = DEFAULT_CONTENT.imageMetadata;
+            savedContent.focalPoint = DEFAULT_CONTENT.focalPoint;
           }
           setContent(savedContent);
         }
