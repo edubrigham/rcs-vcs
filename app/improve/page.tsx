@@ -47,7 +47,7 @@ export default function ImprovePage() {
       <section className="mb-6 rounded-xl border border-line bg-panel px-4 py-3">
         <p className="text-sm leading-relaxed text-muted">
           Deterministic playbook pass: shorter copy, tighter action structure, and safer subject
-          framing for cross-platform consistency. Overall score{" "}
+          framing for cross-platform consistency. Deterministic compliance score{" "}
           <strong className={scoreTone(score.overallScore)}>{score.overallScore}</strong>
           {" → "}
           <strong className={scoreTone(improvedScore.overallScore)}>{improvedScore.overallScore}</strong>.

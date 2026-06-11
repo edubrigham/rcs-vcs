@@ -53,17 +53,51 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
     { label: "Suggested actions", weight: "20%", value: score.actionScore },
     { label: "Layout / platform risk", weight: "15%", value: score.layoutScore },
   ];
+  const severityCounts = {
+    critical: score.warnings.filter((warning) => warning.severity === "critical").length,
+    warning: score.warnings.filter((warning) => warning.severity === "warning").length,
+    info: score.warnings.filter((warning) => warning.severity === "info").length,
+  };
+  const warningGroups: Array<{
+    key: Warning["platform"];
+    title: string;
+    warnings: Warning[];
+  }> = [
+    {
+      key: "ios",
+      title: "iOS",
+      warnings: score.warnings.filter((warning) => warning.platform === "ios"),
+    },
+    {
+      key: "android",
+      title: "Android",
+      warnings: score.warnings.filter((warning) => warning.platform === "android"),
+    },
+    {
+      key: "both",
+      title: "Cross-platform",
+      warnings: score.warnings.filter((warning) => warning.platform === "both"),
+    },
+  ];
 
   return (
     <div className="grid gap-4 lg:grid-cols-[230px_1fr]">
       {/* totals + sub-scores */}
       <div className="rounded-xl border border-line bg-panel p-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-          Compatibility score
+          Deterministic playbook compliance score
         </p>
         <p className={`font-display text-5xl font-bold tabular-nums ${scoreTone(score.overallScore)}`}>
           {score.overallScore}
           <span className="text-lg font-medium text-faint">/100</span>
+        </p>
+        <p className="mt-1 text-[11px] leading-relaxed text-muted">
+          Weighted heuristic model: image safe zone (35%), text fit (30%), suggestions/actions
+          (20%), layout risk (15%).
+        </p>
+        <p className="mt-1 text-[11px] leading-relaxed text-muted">
+          This score reflects deterministic rule compliance in this simulator, not real campaign
+          delivery or conversion performance.
         </p>
         <div className="mt-2 flex gap-4 font-mono text-[11px] text-muted">
           <span>
@@ -97,7 +131,7 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
 
       {/* warnings + recommendations */}
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-line bg-panel p-4">
+        <div className="rounded-xl border border-line bg-white p-4">
           <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
             Warnings · {score.warnings.length}
           </p>
@@ -106,29 +140,44 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
               No platform risks detected — this content should render consistently.
             </p>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {score.warnings.map((w, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-[13px] leading-snug">
-                  <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_STYLE[w.severity].dot}`}
-                  />
-                  <span className="text-body">
-                    <span
-                      className={`mr-1.5 font-mono text-[9px] uppercase tracking-wider ${SEVERITY_STYLE[w.severity].label}`}
-                    >
-                      {w.severity}
-                    </span>
-                    <span className="mr-1.5 rounded bg-panel-strong px-1 py-px font-mono text-[9px] uppercase text-muted">
-                      {PLATFORM_LABEL[w.platform]}
-                    </span>
-                    <span className="mr-1.5 rounded bg-panel px-1 py-px font-mono text-[9px] uppercase text-muted">
-                      {w.category}
-                    </span>
-                    {w.message}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                <span className="rounded-full border border-rose-500/20 bg-white px-2 py-0.5 font-mono text-[10px] text-rose-700">
+                  Critical {severityCounts.critical}
+                </span>
+                <span className="rounded-full border border-amber-400/30 bg-white px-2 py-0.5 font-mono text-[10px] text-amber-700">
+                  Warning {severityCounts.warning}
+                </span>
+                <span className="rounded-full border border-sky-400/30 bg-white px-2 py-0.5 font-mono text-[10px] text-sky-700">
+                  Info {severityCounts.info}
+                </span>
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-3">
+                {warningGroups.map((group) => (
+                  <div key={group.key} className="rounded-xl border border-line bg-white p-3 shadow-[0_6px_20px_-18px_rgba(15,23,42,0.4)]">
+                    <p className="mb-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+                      <span>{group.title}</span>
+                      <span className="rounded border border-line px-1.5 py-px text-[9px]">{group.warnings.length}</span>
+                    </p>
+                    {group.warnings.length === 0 ? (
+                      <p className="text-[12px] text-muted">No warnings.</p>
+                    ) : (
+                      <ul className="flex flex-col gap-2">
+                        {group.warnings.map((w, i) => (
+                          <li key={`${group.key}-${i}`} className="flex items-start gap-2 text-[12px] leading-snug">
+                            <span
+                              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_STYLE[w.severity].dot}`}
+                            />
+                            <span className="text-body">{w.message}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

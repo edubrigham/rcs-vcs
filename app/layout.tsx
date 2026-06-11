@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist_Mono, Inter } from "next/font/google";
 import { SimulatorProvider } from "@/components/SimulatorProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Variable names must match the @theme mappings in globals.css.
+const interSans = Inter({
+  variable: "--font-inter-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const intMono = Geist_Mono({
+  variable: "--font-int-mono",
   subsets: ["latin"],
 });
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const intDisplay = Bricolage_Grotesque({
+  variable: "--font-int-display",
   subsets: ["latin"],
 });
 
@@ -33,7 +34,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="light"
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${interSans.variable} ${intMono.variable} ${intDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <SimulatorProvider>{children}</SimulatorProvider>
