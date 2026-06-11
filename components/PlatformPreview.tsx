@@ -31,7 +31,7 @@ export default function PlatformPreview({
       {(caption || scoreChip) && (
         <div className="flex items-center gap-2">
           {caption ? (
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
+            <span className="font-mono text-[12px] font-semibold tracking-[0.15em] text-muted">
               {caption}
             </span>
           ) : null}
@@ -93,9 +93,6 @@ export default function PlatformPreview({
         </div>
       </div>
 
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
-        {isIos ? "iOS · Messages" : "Android · Google Messages"}
-      </span>
     </div>
   );
 }

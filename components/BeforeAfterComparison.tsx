@@ -55,7 +55,7 @@ export default function BeforeAfterComparison({
           <div key={platform} className="flex flex-wrap items-start justify-center gap-6">
             <PlatformPreview
               platform={platform}
-              caption="Original"
+              caption={`${platform === "ios" ? "iOS" : "Android"} · Original`}
               scoreChip={<ScoreChip value={platformScore(originalScore, platform)} />}
             >
               <RcsCardPreview
@@ -70,7 +70,7 @@ export default function BeforeAfterComparison({
 
             <PlatformPreview
               platform={platform}
-              caption="Improved"
+              caption={`${platform === "ios" ? "iOS" : "Android"} · Improved`}
               scoreChip={
                 <ScoreChip
                   value={platformScore(improvedScore, platform)}

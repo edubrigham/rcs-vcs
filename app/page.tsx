@@ -93,13 +93,7 @@ export default function Home() {
 
       {/* ── Editor + previews ── */}
       <div className="grid gap-8 lg:grid-cols-[minmax(330px,390px)_1fr]">
-        <RcsInputPanel
-          content={content}
-          onContentChange={patchContent}
-          toggles={toggles}
-          platforms={platforms}
-          onPlatformsChange={setPlatforms}
-        />
+        <RcsInputPanel content={content} onContentChange={patchContent} toggles={toggles} />
 
         <div className="flex flex-col gap-8">
           <div className="overflow-hidden rounded-2xl border border-line bg-[radial-gradient(ellipse_at_top,rgba(56,130,246,0.08),transparent_60%)]">
@@ -121,6 +115,24 @@ export default function Home() {
                     }`}
                   >
                     {format}
+                  </button>
+                ))}
+              </div>
+              {/* platform visibility toggles (moved here from the left panel) */}
+              <div className="flex items-center gap-1.5">
+                {(["ios", "android"] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={platforms[p]}
+                    onClick={() => setPlatforms({ ...platforms, [p]: !platforms[p] })}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                      platforms[p]
+                        ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-700"
+                        : "border-line bg-panel text-muted hover:border-line-strong"
+                    }`}
+                  >
+                    {p === "ios" ? "iOS preview" : "Android preview"}
                   </button>
                 ))}
               </div>
@@ -156,12 +168,12 @@ export default function Home() {
 
             <div className="flex flex-wrap items-start justify-center gap-8 p-6 pb-2">
               {platforms.ios && (
-                <PlatformPreview platform="ios">
+                <PlatformPreview platform="ios" caption="iOS">
                   <RcsCardPreview content={content} platform="ios" toggles={toggles} />
                 </PlatformPreview>
               )}
               {platforms.android && (
-                <PlatformPreview platform="android">
+                <PlatformPreview platform="android" caption="Android">
                   <RcsCardPreview content={content} platform="android" toggles={toggles} />
                 </PlatformPreview>
               )}

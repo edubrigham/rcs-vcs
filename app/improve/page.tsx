@@ -83,11 +83,7 @@ export default function ImprovePage() {
         toggles={toggles}
       />
 
-      <footer className="mt-16 border-t border-line pt-5 font-mono text-[10px] leading-relaxed text-faint">
-        Deterministic simulation — no AI involved yet; the Anthropic Agent SDK layer plugs in
-        behind the same interface. This is an approximation based on the RCS UX playbooks:
-        actual rendering may vary by device, font size, app version, and orientation.
-      </footer>
+      
     </main>
   );
 }

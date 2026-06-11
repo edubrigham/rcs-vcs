@@ -32,8 +32,6 @@ interface RcsInputPanelProps {
   onContentChange: (patch: Partial<RcsContent>) => void;
   /** Read-only here: drives the focal-point editor's safe-zone overlay. */
   toggles: OverlayToggles;
-  platforms: PlatformVisibility;
-  onPlatformsChange: (platforms: PlatformVisibility) => void;
 }
 
 const ACTION_TYPES: { value: RcsActionType; label: string }[] = [
@@ -54,8 +52,6 @@ export default function RcsInputPanel({
   content,
   onContentChange,
   toggles,
-  platforms,
-  onPlatformsChange,
 }: RcsInputPanelProps) {
   const fileInputId = useId();
   const objectUrlRef = useRef<string | null>(null);
@@ -324,25 +320,6 @@ export default function RcsInputPanel({
         >
           + Add action
         </button>
-
-        {/* Card format + overlay toggles live in the preview toolbar; only
-            platform visibility stays in the panel. */}
-        <div className="mt-3 flex gap-1.5 border-t border-line pt-3">
-          {(["ios", "android"] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => onPlatformsChange({ ...platforms, [p]: !platforms[p] })}
-              className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
-                platforms[p]
-                  ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                  : "border-line bg-field text-muted hover:border-line-strong"
-              }`}
-            >
-              {p === "ios" ? "iOS preview" : "Android preview"}
-            </button>
-          ))}
-        </div>
       </Section>
     </div>
   );
