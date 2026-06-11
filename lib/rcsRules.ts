@@ -46,6 +46,11 @@ export const IOS_RULES = {
   extremeAspectBelow: 0.5,
   /** Cap (DP) we apply to iOS vertical-card media height in the simulation. */
   verticalMediaHeightCap: 240,
+  /** Format-specific vertical-card caps (DP): medium 21:9, tall 3:2. */
+  verticalFormatMediaHeightCap: {
+    medium: 132,
+    tall: 204,
+  },
 } as const;
 
 export const ANDROID_RULES = {
@@ -186,13 +191,17 @@ export function getPlatformRules(
         descriptionCharsPerLine: 30,
       };
     }
-    // [CardMedia p28] iOS vertical cards keep native aspect; height capped here
-    // so the simulation stays inside a phone frame. Long text tightens the cap
-    // ("…or text content is long").
+    // [CardMedia p28] iOS vertical cards keep native aspect; format selection
+    // still changes the vertical container family (medium 21:9 vs tall 3:2),
+    // so we apply distinct caps per format. Long text tightens the cap.
+    const baseCap =
+      cardFormat === "medium"
+        ? IOS_RULES.verticalFormatMediaHeightCap.medium
+        : IOS_RULES.verticalFormatMediaHeightCap.tall;
     const cap =
       severity === "low"
-        ? IOS_RULES.verticalMediaHeightCap
-        : Math.round(IOS_RULES.verticalMediaHeightCap * 0.85);
+        ? baseCap
+        : Math.round(baseCap * 0.85);
     return {
       mediaWidth: CARD_WIDTH.ios,
       mediaHeight: cap,

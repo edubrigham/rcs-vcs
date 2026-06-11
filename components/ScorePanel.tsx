@@ -23,21 +23,21 @@ import {
 import { parseRecommendationCitations } from "@/lib/recommendationCitations";
 
 export function scoreTone(score: number): string {
-  if (score >= 80) return "text-emerald-600 dark:text-emerald-400";
-  if (score >= 60) return "text-amber-600 dark:text-amber-400";
-  return "text-rose-600 dark:text-rose-400";
+  if (score >= 80) return "text-[var(--color-secondary)]";
+  if (score >= 60) return "text-[var(--color-accent)]";
+  return "text-[var(--color-destructive)]";
 }
 
 function barTone(score: number): string {
-  if (score >= 80) return "bg-emerald-400";
-  if (score >= 60) return "bg-amber-400";
-  return "bg-rose-400";
+  if (score >= 80) return "bg-[var(--color-secondary)]";
+  if (score >= 60) return "bg-[var(--color-accent)]";
+  return "bg-[var(--color-destructive)]";
 }
 
 const SEVERITY_STYLE: Record<Warning["severity"], { dot: string; label: string }> = {
-  critical: { dot: "bg-rose-500", label: "text-rose-600 dark:text-rose-400" },
-  warning: { dot: "bg-amber-400", label: "text-amber-600 dark:text-amber-400" },
-  info: { dot: "bg-sky-400", label: "text-sky-600 dark:text-sky-400" },
+  critical: { dot: "bg-[var(--color-destructive)]", label: "text-[var(--color-destructive)]" },
+  warning: { dot: "bg-[var(--color-accent)]", label: "text-[var(--color-accent)]" },
+  info: { dot: "bg-[var(--color-primary)]", label: "text-[var(--color-primary)]" },
 };
 
 const PLATFORM_LABEL: Record<Warning["platform"], string> = {
@@ -136,19 +136,19 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
             Warnings · {score.warnings.length}
           </p>
           {score.warnings.length === 0 ? (
-            <p className="text-sm text-emerald-600 dark:text-emerald-400">
+            <p className="text-sm text-[var(--color-secondary)]">
               No platform risks detected — this content should render consistently.
             </p>
           ) : (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-1.5">
-                <span className="rounded-full border border-rose-500/20 bg-white px-2 py-0.5 font-mono text-[10px] text-rose-700">
+                <span className="rounded-full border border-[var(--color-destructive)]/25 bg-white px-2 py-0.5 font-mono text-[10px] text-[var(--color-destructive)]">
                   Critical {severityCounts.critical}
                 </span>
-                <span className="rounded-full border border-amber-400/30 bg-white px-2 py-0.5 font-mono text-[10px] text-amber-700">
+                <span className="rounded-full border border-[var(--color-accent)]/35 bg-white px-2 py-0.5 font-mono text-[10px] text-[var(--color-accent)]">
                   Warning {severityCounts.warning}
                 </span>
-                <span className="rounded-full border border-sky-400/30 bg-white px-2 py-0.5 font-mono text-[10px] text-sky-700">
+                <span className="rounded-full border border-[var(--color-primary)]/35 bg-white px-2 py-0.5 font-mono text-[10px] text-[var(--color-primary)]">
                   Info {severityCounts.info}
                 </span>
               </div>
@@ -191,7 +191,7 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
                 const parsed = parseRecommendationCitations(r.message);
                 return (
                   <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-body">
-                    <span className="mt-0.5 text-emerald-600 dark:text-emerald-400">→</span>
+                    <span className="mt-0.5 text-[var(--color-secondary)]">→</span>
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       <span>{parsed.text}</span>
                       {parsed.citations.length > 0 ? (

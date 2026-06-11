@@ -98,7 +98,7 @@ export default function Home() {
                       i > 0 ? "border-l border-line" : ""
                     } ${
                       content.cardFormat === format
-                        ? "bg-sky-500/15 text-sky-800"
+                        ? "border-[var(--color-primary)] bg-panel-strong text-[var(--color-primary)]"
                         : "text-muted hover:text-body"
                     }`}
                   >
@@ -116,7 +116,7 @@ export default function Home() {
                     onClick={() => setPlatforms({ ...platforms, [p]: !platforms[p] })}
                     className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                       platforms[p]
-                        ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-700"
+                        ? "border-[var(--color-secondary)] bg-panel-strong text-[var(--color-secondary)]"
                         : "border-line bg-panel text-muted hover:border-line-strong"
                     }`}
                   >
@@ -137,7 +137,7 @@ export default function Home() {
                     }
                     className={`flex h-8 w-8 items-center justify-center rounded-lg border transition ${
                       toggles[filter.key]
-                        ? "border-sky-500/60 bg-sky-500/10 text-sky-700"
+                        ? "border-[var(--color-accent)] bg-panel-strong text-[var(--color-accent)]"
                         : "border-line bg-panel text-muted hover:border-line-strong"
                     }`}
                   >

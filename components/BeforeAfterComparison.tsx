@@ -45,7 +45,7 @@ function ScoreChip({ value, delta }: { value: number; delta?: number }) {
     <span className="flex items-center gap-1.5 rounded-full border border-line bg-field px-2 py-0.5 font-mono text-[11px]">
       <span className={`font-semibold ${scoreTone(value)}`}>{value}</span>
       {delta !== undefined && delta !== 0 && (
-        <span className={delta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+        <span className={delta > 0 ? "text-[var(--color-secondary)]" : "text-[var(--color-destructive)]"}>
           {delta > 0 ? `▲ +${delta}` : `▼ ${delta}`}
         </span>
       )}
@@ -111,8 +111,8 @@ export default function BeforeAfterComparison({
       </div>
 
       {/* applied changes */}
-      <aside className="h-fit rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 xl:sticky xl:top-6">
-        <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
+      <aside className="h-fit rounded-xl border border-[var(--color-secondary)]/30 bg-[var(--color-secondary)]/8 p-4 xl:sticky xl:top-6">
+        <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-secondary)]">
           Changes applied
         </p>
         <p className="mb-3 font-mono text-[11px] text-muted">
@@ -124,7 +124,7 @@ export default function BeforeAfterComparison({
         <ul className="flex flex-col gap-2">
           {recommendationRows.map((row, i) => (
             <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-body">
-              <span className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400">✓</span>
+              <span className="mt-0.5 shrink-0 text-[var(--color-secondary)]">✓</span>
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <span>{row.text}</span>
                 {row.citations.length > 0 ? (

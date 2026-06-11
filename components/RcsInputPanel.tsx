@@ -47,6 +47,7 @@ const VALUE_PLACEHOLDER: Record<RcsActionType, string> = {
 };
 
 let actionSeq = 0;
+const XPLATFORM_PLAYBOOK = "https://www.gstatic.com/rbm-devsite/ux/xPlatformPlaybook_April2026.pdf";
 
 export default function RcsInputPanel({
   content,
@@ -203,7 +204,15 @@ export default function RcsInputPanel({
       </Section>
 
       {/* ── Text ── */}
-      <Section title="2 · Text" hint="3 lines recommended (xPlatform s11)">
+      <Section
+        title="2 · Text"
+        hint={
+          <>
+            3 lines recommended{" "}
+            <DocHintLink href={`${XPLATFORM_PLAYBOOK}#page=11`} label="xPlatform s11" />
+          </>
+        }
+      >
         <label className="block">
           <span className="flex items-baseline justify-between">
             <span className="text-xs font-medium text-body">Title</span>
@@ -235,7 +244,13 @@ export default function RcsInputPanel({
       {/* ── Actions ── */}
       <Section
         title="3 · Suggested actions"
-        hint={`Max ${SUGGESTION_RULES.maxSuggestionsPerCard} per card, ${SUGGESTION_RULES.maxSuggestionLabelChars} chars each (xPlatform s17)`}
+        hint={
+          <>
+            Max {SUGGESTION_RULES.maxSuggestionsPerCard} per card,{" "}
+            {SUGGESTION_RULES.maxSuggestionLabelChars} chars each{" "}
+            <DocHintLink href={`${XPLATFORM_PLAYBOOK}#page=17`} label="xPlatform s17" />
+          </>
+        }
       >
         <div className="flex flex-col gap-2">
           {content.actions.map((action) => (
@@ -340,7 +355,7 @@ function Section({
   children,
 }: {
   title: string;
-  hint?: string;
+  hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -360,12 +375,44 @@ function Section({
   );
 }
 
+function DocHintLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={`Open source citation ${label}`}
+      title={`Open source citation ${label}`}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-line bg-white text-[var(--color-primary)] shadow-[0_1px_3px_rgba(15,23,42,0.08)] transition hover:-translate-y-px hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/6"
+    >
+      <svg
+        viewBox="0 0 16 16"
+        className="h-3.5 w-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.35}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2.4 3.8a1.4 1.4 0 0 1 1.4-1.4h3.2a2 2 0 0 1 1.6.75 2 2 0 0 1 1.6-.75h2a1.4 1.4 0 0 1 1.4 1.4v7.8a.8.8 0 0 1-.8.8h-2.6a2.2 2.2 0 0 0-1.6.63 2.2 2.2 0 0 0-1.6-.63H3.2a.8.8 0 0 1-.8-.8z" />
+        <path d="M8.6 3.15v9.2" />
+        <path d="M4.4 5.1h2.4M10 5.1h2M4.4 7h1.8M10 7h2.2" />
+      </svg>
+    </a>
+  );
+}
+
 function CharCount({ value, soft }: { value: number; soft: number }) {
+  const isOverflow = value > soft;
   return (
     <span
-      className={`font-mono text-[10px] ${value > soft ? "text-amber-400" : "text-faint"}`}
+      className={`font-mono text-[10px] ${
+        isOverflow
+          ? "rounded border border-[var(--color-destructive)]/35 bg-[var(--color-destructive)]/10 px-1.5 py-0.5 font-semibold text-[var(--color-destructive)]"
+          : "text-faint"
+      }`}
     >
-      {value} chars{value > soft ? ` · >${soft} risks truncation` : ""}
+      {value} chars{isOverflow ? ` · ⚠ >${soft} truncation risk` : ""}
     </span>
   );
 }

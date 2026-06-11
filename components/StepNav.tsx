@@ -35,15 +35,16 @@ export default function StepNav() {
                   : "idle";
 
           const pillClass = {
-            active: "border-sky-500/60 bg-sky-500/10 text-sky-800",
-            done: "border-emerald-600/40 text-emerald-700 hover:border-emerald-600/70",
+            active:
+              "border-[var(--color-primary)] bg-panel-strong text-[var(--color-primary)]",
+            done: "border-[var(--color-secondary)] text-[var(--color-secondary)] hover:bg-panel-strong",
             idle: "border-line bg-panel text-muted hover:border-line-strong",
             soon: "cursor-not-allowed border-line bg-panel text-muted opacity-45",
           }[state];
 
           const numberClass = {
-            active: "border-sky-500 bg-sky-500 text-white",
-            done: "border-emerald-600 text-emerald-600",
+            active: "border-[var(--color-primary)] bg-[var(--color-primary)] text-white",
+            done: "border-[var(--color-secondary)] text-[var(--color-secondary)]",
             idle: "border-line-strong text-muted",
             soon: "border-line-strong text-muted",
           }[state];
