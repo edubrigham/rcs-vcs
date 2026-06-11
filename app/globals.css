@@ -68,3 +68,11 @@ body {
 .font-display {
   font-family: var(--font-display), var(--font-sans), sans-serif;
 }
+
+/* Phone-frame conversation areas scroll without visible scrollbars. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

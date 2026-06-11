@@ -39,9 +39,11 @@ export default function PlatformPreview({
         </div>
       )}
 
-      <div className="w-[320px] shrink-0 rounded-[2.4rem] border border-line bg-zinc-900 p-[7px] shadow-[0_24px_60px_-24px_rgba(0,0,0,0.8)]">
+      <div className="w-[324px] shrink-0 rounded-[2.4rem] border border-line bg-zinc-900 p-[7px] shadow-[0_24px_60px_-24px_rgba(0,0,0,0.8)]">
+        {/* The SCREEN is the fixed-height box, so platform-specific header
+            heights don't change the device size. */}
         <div
-          className={`relative overflow-hidden rounded-[2rem] ${
+          className={`relative flex h-[600px] flex-col overflow-hidden rounded-[2rem] ${
             isIos ? "bg-white" : "bg-[#f7f9fc]"
           }`}
         >
@@ -80,10 +82,9 @@ export default function PlatformPreview({
             </div>
           )}
 
-          {/* conversation area: fixed height so every device frame is the same
-              size — content differences show INSIDE the screen, like a real
-              phone. Long cards scroll, as they would in a real conversation. */}
-          <div className="h-[560px] overflow-y-auto px-3.5 pb-5 pt-4">
+          {/* conversation area fills the remaining screen; long cards scroll
+              vertically with hidden scrollbars, like a real phone. */}
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-5 pt-4">
             <p className="mb-2.5 text-center font-mono text-[9px] uppercase tracking-wider text-zinc-400">
               Today
             </p>
