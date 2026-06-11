@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Theme is driven by <html data-theme="dark|light">, toggled by ThemeToggle. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="dark"] {
+  --background: #0b0e15;
+  --foreground: #e4e4e7;
+  --heading: #fafafa;
+  --body: #d4d4d8;
+  --muted: #9aa1ad;
+  --faint: #5d6470;
+  --panel: rgba(255, 255, 255, 0.03);
+  --panel-strong: rgba(255, 255, 255, 0.1);
+  --field: rgba(0, 0, 0, 0.3);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.3);
+  --accent: #38bdf8;
+  --glow-a: rgba(56, 130, 246, 0.09);
+  --glow-b: rgba(16, 185, 129, 0.05);
+}
+
+[data-theme="light"] {
+  --background: #eef1f7;
+  --foreground: #1e2636;
+  --heading: #0f172a;
+  --body: #2b3548;
+  --muted: #5d6a80;
+  --faint: #8c96a8;
+  --panel: rgba(15, 23, 42, 0.04);
+  --panel-strong: rgba(15, 23, 42, 0.09);
+  --field: #ffffff;
+  --line: rgba(15, 23, 42, 0.14);
+  --line-strong: rgba(15, 23, 42, 0.34);
+  --accent: #0270c0;
+  --glow-a: rgba(56, 130, 246, 0.12);
+  --glow-b: rgba(16, 185, 129, 0.08);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-heading: var(--heading);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-panel: var(--panel);
+  --color-panel-strong: var(--panel-strong);
+  --color-field: var(--field);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-bricolage);
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1100px 500px at 80% -10%, var(--glow-a), transparent),
+    radial-gradient(900px 420px at 0% 0%, var(--glow-b), transparent),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
 }

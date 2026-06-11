@@ -1,65 +1,214 @@
-import Image from "next/image";
+"use client";
+
+/**
+ * Phase 1 — the visual simulator: author a card, see iOS/Android side by
+ * side, get the deterministic compatibility score.
+ *
+ * Phase 2 (improvement simulation + before/after) lives on /improve.
+ *
+ * TODO: replace deterministic improveRcsContent with the Anthropic Agent SDK
+ *       (the agent must load /skills/rcs-playbook-rules as its source of truth).
+ */
+
+import Link from "next/link";
+import { useMemo } from "react";
+import PlatformPreview from "@/components/PlatformPreview";
+import RcsCardPreview from "@/components/RcsCardPreview";
+import RcsInputPanel from "@/components/RcsInputPanel";
+import ScorePanel from "@/components/ScorePanel";
+import { useSimulator } from "@/components/SimulatorProvider";
+import StepNav from "@/components/StepNav";
+import { improveRcsContent } from "@/lib/improveRcsContent";
+import { scoreRcsContent } from "@/lib/scoreRcsContent";
+import type { CardFormat, OverlayToggles } from "@/types/rcs";
+
+const DISCLAIMER =
+  "This is an approximation based on the RCS UX playbooks. Actual rendering may vary by device, font size, app version, and orientation.";
+
+const CARD_FORMATS: CardFormat[] = ["compact", "medium", "tall"];
+
+/** Overlay toggles rendered as filter icons in the preview toolbar. */
+const OVERLAY_FILTERS: { key: keyof OverlayToggles; label: string; icon: React.ReactNode }[] = [
+  {
+    key: "showSafeZone",
+    label: "Safe zone + 1:1 critical area",
+    icon: (
+      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.6}>
+        <rect x="1.5" y="1.5" width="13" height="13" rx="2" />
+        <rect x="5" y="5" width="6" height="6" strokeDasharray="2 1.6" />
+      </svg>
+    ),
+  },
+  {
+    key: "showCropArea",
+    label: "Crop area (what survives)",
+    icon: (
+      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.6}>
+        <path d="M4 1v11h11M1 4h11v11" />
+      </svg>
+    ),
+  },
+  {
+    key: "showTextLineLimits",
+    label: "Text line limits",
+    icon: (
+      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.6}>
+        <path d="M2 4h12M2 8h12M2 12h7" />
+        <circle cx="11.2" cy="12" r="0.6" fill="currentColor" stroke="none" />
+        <circle cx="13" cy="12" r="0.6" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+];
 
 export default function Home() {
+  const { content, patchContent, toggles, setToggles, platforms, setPlatforms } =
+    useSimulator();
+
+  const score = useMemo(() => scoreRcsContent(content), [content]);
+
+  // Teaser for the /improve page: how many points the deterministic
+  // improvements would gain on the current content.
+  const potentialGain = useMemo(() => {
+    const improved = improveRcsContent(content, score);
+    return scoreRcsContent(improved.improvedContent).overallScore - score.overallScore;
+  }, [content, score]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="mx-auto w-full max-w-[1500px] px-5 pb-24 pt-8">
+      {/* ── Header: title row + centered step navigation ── */}
+      <header className="mb-8 border-b border-line pb-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-accent">
+          Naxai · RCS Lab
+        </p>
+        <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
+          RCS Visual Compatibility Simulator
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+          The same rich card renders differently on Apple and Android. Author once, see both,
+          and catch cropping, truncation and action-dropdown risks before sending.
+        </p>
+        <StepNav />
+      </header>
+
+      {/* ── Editor + previews ── */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(330px,390px)_1fr]">
+        <RcsInputPanel
+          content={content}
+          onContentChange={patchContent}
+          toggles={toggles}
+          platforms={platforms}
+          onPlatformsChange={setPlatforms}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+
+        <div className="flex flex-col gap-8">
+          <div className="overflow-hidden rounded-2xl border border-line bg-[radial-gradient(ellipse_at_top,rgba(56,130,246,0.08),transparent_60%)]">
+            {/* toolbar: card format (left) + overlay filters and disclaimer (right) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-4 py-2.5">
+              <div className="flex overflow-hidden rounded-lg border border-line">
+                {CARD_FORMATS.map((format, i) => (
+                  <button
+                    key={format}
+                    type="button"
+                    onClick={() => patchContent({ cardFormat: format })}
+                    aria-pressed={content.cardFormat === format}
+                    className={`px-4 py-1.5 text-xs font-semibold capitalize transition ${
+                      i > 0 ? "border-l border-line" : ""
+                    } ${
+                      content.cardFormat === format
+                        ? "bg-sky-500/15 text-sky-800"
+                        : "text-muted hover:text-body"
+                    }`}
+                  >
+                    {format}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {OVERLAY_FILTERS.map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    title={filter.label}
+                    aria-label={filter.label}
+                    aria-pressed={toggles[filter.key]}
+                    onClick={() =>
+                      setToggles({ ...toggles, [filter.key]: !toggles[filter.key] })
+                    }
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg border transition ${
+                      toggles[filter.key]
+                        ? "border-sky-500/60 bg-sky-500/10 text-sky-700"
+                        : "border-line bg-panel text-muted hover:border-line-strong"
+                    }`}
+                  >
+                    {filter.icon}
+                  </button>
+                ))}
+                <span
+                  title={DISCLAIMER}
+                  className="ml-1 cursor-help font-mono text-xs text-faint"
+                  aria-label={DISCLAIMER}
+                >
+                  ⓘ
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-start justify-center gap-8 p-6 pb-2">
+              {platforms.ios && (
+                <PlatformPreview platform="ios">
+                  <RcsCardPreview content={content} platform="ios" toggles={toggles} />
+                </PlatformPreview>
+              )}
+              {platforms.android && (
+                <PlatformPreview platform="android">
+                  <RcsCardPreview content={content} platform="android" toggles={toggles} />
+                </PlatformPreview>
+              )}
+              {!platforms.ios && !platforms.android && (
+                <p className="py-20 text-sm text-muted">
+                  Enable at least one platform preview in the panel on the left.
+                </p>
+              )}
+            </div>
+            <p className="pb-3 text-center font-mono text-[10px] text-faint">
+              ⓘ approximation — varies by device, font size, app version &amp; orientation
+            </p>
+          </div>
+
+          <ScorePanel score={score} />
+
+          {/* ── Phase 2 entry point ── */}
+          <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-panel p-5">
+            <div className="min-w-52 flex-1">
+              <h2 className="font-display text-lg font-semibold text-heading">
+                Phase 2 · Improvement studio
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                See the playbook recommendations applied to this card and compare original vs
+                improved per platform — on its own page.
+              </p>
+            </div>
+            <Link
+              href="/improve"
+              className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(14,165,233,0.7)] transition hover:bg-sky-400 active:scale-[0.98]"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              Open improvement studio
+              {potentialGain > 0 ? (
+                <span className="ml-2 rounded-md bg-white/20 px-1.5 py-0.5 font-mono text-xs">
+                  +{potentialGain}
+                </span>
+              ) : null}
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+
+      <footer className="mt-16 border-t border-line pt-5 font-mono text-[10px] leading-relaxed text-faint">
+        Rendering rules sourced from Google&apos;s RCS for Business playbooks: Card Media
+        Playbook (March 2026) &amp; X-Platform Playbook (April 2026). Local MVP — no data leaves
+        the browser.
+      </footer>
+    </main>
   );
 }
