@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Wizard navigation: 1 Draft → 2 Refine → 3 AI Enhance.
+ * Wizard navigation: 1 Draft → 2 Playbook Pass → 3 LLM Enhanced → 4 Agent Enhanced.
  * Sits on its own centered row (~2/3 width) below the page title.
  * Step 3 is the future Anthropic Agent SDK phase — visible but disabled.
  */
@@ -12,8 +12,9 @@ import { Fragment } from "react";
 
 const STEPS = [
   { n: 1, label: "Draft", href: "/" },
-  { n: 2, label: "Refine", href: "/improve" },
-  { n: 3, label: "AI Enhance", href: null },
+  { n: 2, label: "Playbook Pass", href: "/improve" },
+  { n: 3, label: "LLM Enhanced", href: null },
+  { n: 4, label: "Agent Enhanced", href: null },
 ] as const;
 
 export default function StepNav() {
