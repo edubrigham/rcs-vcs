@@ -112,7 +112,7 @@ export default function RcsInputPanel({
   return (
     <div className="flex flex-col gap-5">
       {/* ── Media ── */}
-      <Section title="1 · Media" hint="Upload the card image">
+      <Section title="1 · Media">
         <div className="flex items-center gap-2">
           <label
             htmlFor={fileInputId}
@@ -140,17 +140,26 @@ export default function RcsInputPanel({
           >
             Use sample
           </button>
-          {content.imageUrl ? (
-            <button
-              type="button"
-              onClick={() =>
-                onContentChange({ imageUrl: null, imageMetadata: undefined })
-              }
-              className="ml-auto rounded-lg px-2 py-1.5 text-xs text-muted transition hover:text-rose-400"
+          <button
+            type="button"
+            onClick={() => onContentChange({ ...DEFAULT_CONTENT })}
+            title="Reset the canvas to the sample demo"
+            aria-label="Reset the canvas to the sample demo"
+            className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-panel text-muted transition hover:border-line-strong hover:text-body"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              Remove
-            </button>
-          ) : null}
+              <path d="M2.5 8a5.5 5.5 0 1 0 1.61-3.89" />
+              <path d="M2.5 1.5v3h3" />
+            </svg>
+          </button>
         </div>
 
         {content.imageUrl && content.imageMetadata ? (
