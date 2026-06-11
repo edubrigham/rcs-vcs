@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Wizard navigation: 1 Setup → 2 Improve → 3 AI Improve.
+ * Wizard navigation: 1 Draft → 2 Refine → 3 AI Enhance.
  * Sits on its own centered row (~2/3 width) below the page title.
  * Step 3 is the future Anthropic Agent SDK phase — visible but disabled.
  */
@@ -11,9 +11,9 @@ import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 
 const STEPS = [
-  { n: 1, label: "Setup", href: "/" },
-  { n: 2, label: "Improve", href: "/improve" },
-  { n: 3, label: "AI Improve", href: null },
+  { n: 1, label: "Draft", href: "/" },
+  { n: 2, label: "Refine", href: "/improve" },
+  { n: 3, label: "AI Enhance", href: null },
 ] as const;
 
 export default function StepNav() {
@@ -49,7 +49,7 @@ export default function StepNav() {
 
           const pill = (
             <span
-              className={`flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${pillClass}`}
+              className={`flex w-full items-center justify-center gap-2 rounded-full border px-4 py-4 text-sm font-semibold transition ${pillClass}`}
               aria-current={state === "active" ? "step" : undefined}
             >
               <span

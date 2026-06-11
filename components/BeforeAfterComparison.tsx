@@ -7,8 +7,23 @@
  */
 
 import { scoreTone } from "@/components/ScorePanel";
+import {
+  InlineCitation,
+  InlineCitationCard,
+  InlineCitationCardBody,
+  InlineCitationCardTrigger,
+  InlineCitationCarousel,
+  InlineCitationCarouselContent,
+  InlineCitationCarouselHeader,
+  InlineCitationCarouselIndex,
+  InlineCitationCarouselItem,
+  InlineCitationCarouselNext,
+  InlineCitationCarouselPrev,
+  InlineCitationSource,
+} from "@/components/ai-elements/inline-citation";
 import PlatformPreview from "@/components/PlatformPreview";
 import RcsCardPreview from "@/components/RcsCardPreview";
+import { parseRecommendationCitations } from "@/lib/recommendationCitations";
 import type {
   ImprovedRcsContent,
   OverlayToggles,
@@ -47,6 +62,7 @@ export default function BeforeAfterComparison({
 }: BeforeAfterComparisonProps) {
   const platformScore = (score: ScoreResult, platform: Platform) =>
     platform === "ios" ? score.iosScore : score.androidScore;
+  const recommendationRows = improved.changes.map(parseRecommendationCitations);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
@@ -106,10 +122,41 @@ export default function BeforeAfterComparison({
           </span>
         </p>
         <ul className="flex flex-col gap-2">
-          {improved.changes.map((change, i) => (
+          {recommendationRows.map((row, i) => (
             <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-body">
               <span className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400">✓</span>
-              {change}
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <span>{row.text}</span>
+                {row.citations.length > 0 ? (
+                  <InlineCitation>
+                    <InlineCitationCard>
+                      <InlineCitationCardTrigger
+                        sources={row.citations.map((citation) => citation.url)}
+                      />
+                      <InlineCitationCardBody>
+                        <InlineCitationCarousel>
+                          <InlineCitationCarouselHeader>
+                            <InlineCitationCarouselPrev />
+                            <InlineCitationCarouselNext />
+                            <InlineCitationCarouselIndex />
+                          </InlineCitationCarouselHeader>
+                          <InlineCitationCarouselContent>
+                            {row.citations.map((citation) => (
+                              <InlineCitationCarouselItem key={`${citation.url}-${citation.label}`}>
+                                <InlineCitationSource
+                                  title={citation.displayTitle}
+                                  url={citation.url}
+                                  description={citation.description}
+                                />
+                              </InlineCitationCarouselItem>
+                            ))}
+                          </InlineCitationCarouselContent>
+                        </InlineCitationCarousel>
+                      </InlineCitationCardBody>
+                    </InlineCitationCard>
+                  </InlineCitation>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>

@@ -171,8 +171,8 @@ export default function RcsCardPreview({
   const movedActionsNote =
     secondaryActions.length > 0 ? (
       <p className="mt-1.5 px-1 font-mono text-[9px] leading-snug text-amber-600">
-        ⚠ {secondaryActions.length} CTA{secondaryActions.length > 1 ? "s" : ""} moved to a
-        follow-up message — transient on Android (xPlatform s18)
+        ⚠ {secondaryActions.length} suggestion{secondaryActions.length > 1 ? "s" : ""} moved to a
+        follow-up message (xPlatform s17-s18)
       </p>
     ) : null;
 
@@ -325,7 +325,7 @@ export default function RcsCardPreview({
         )}
 
         {content.actions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 px-3 pb-3">
+          <div className="mt-1.5 flex flex-wrap gap-1.5 px-3 pb-3">
             {visibleChips.map((action) => (
               <button
                 key={action.id}

@@ -10,7 +10,6 @@
  *       (the agent must load /skills/rcs-playbook-rules as its source of truth).
  */
 
-import Link from "next/link";
 import { useMemo } from "react";
 import PlatformPreview from "@/components/PlatformPreview";
 import RcsCardPreview from "@/components/RcsCardPreview";
@@ -18,7 +17,6 @@ import RcsInputPanel from "@/components/RcsInputPanel";
 import ScorePanel from "@/components/ScorePanel";
 import { useSimulator } from "@/components/SimulatorProvider";
 import StepNav from "@/components/StepNav";
-import { improveRcsContent } from "@/lib/improveRcsContent";
 import { scoreRcsContent } from "@/lib/scoreRcsContent";
 import type { CardFormat, OverlayToggles } from "@/types/rcs";
 
@@ -67,13 +65,6 @@ export default function Home() {
 
   const score = useMemo(() => scoreRcsContent(content), [content]);
 
-  // Teaser for the /improve page: how many points the deterministic
-  // improvements would gain on the current content.
-  const potentialGain = useMemo(() => {
-    const improved = improveRcsContent(content, score);
-    return scoreRcsContent(improved.improvedContent).overallScore - score.overallScore;
-  }, [content, score]);
-
   return (
     <main className="mx-auto w-full max-w-[1500px] px-5 pb-24 pt-8">
       {/* ── Header: title row + centered step navigation ── */}
@@ -84,10 +75,7 @@ export default function Home() {
         <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
           RCS Visual Compatibility Simulator
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-          The same rich card renders differently on Apple and Android. Author once, see both,
-          and catch cropping, truncation and action-dropdown risks before sending.
-        </p>
+        
         <StepNav />
       </header>
 
@@ -187,29 +175,6 @@ export default function Home() {
 
           <ScorePanel score={score} />
 
-          {/* ── Phase 2 entry point ── */}
-          <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-panel p-5">
-            <div className="min-w-52 flex-1">
-              <h2 className="font-display text-lg font-semibold text-heading">
-                Phase 2 · Improvement studio
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                See the playbook recommendations applied to this card and compare original vs
-                improved per platform — on its own page.
-              </p>
-            </div>
-            <Link
-              href="/improve"
-              className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(14,165,233,0.7)] transition hover:bg-sky-400 active:scale-[0.98]"
-            >
-              Open improvement studio
-              {potentialGain > 0 ? (
-                <span className="ml-2 rounded-md bg-white/20 px-1.5 py-0.5 font-mono text-xs">
-                  +{potentialGain}
-                </span>
-              ) : null}
-            </Link>
-          </div>
         </div>
       </div>
     </main>

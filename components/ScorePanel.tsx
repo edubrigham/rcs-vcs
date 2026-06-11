@@ -6,6 +6,21 @@
  */
 
 import type { ScoreResult, Warning } from "@/types/rcs";
+import {
+  InlineCitation,
+  InlineCitationCard,
+  InlineCitationCardBody,
+  InlineCitationCardTrigger,
+  InlineCitationCarousel,
+  InlineCitationCarouselContent,
+  InlineCitationCarouselHeader,
+  InlineCitationCarouselIndex,
+  InlineCitationCarouselItem,
+  InlineCitationCarouselNext,
+  InlineCitationCarouselPrev,
+  InlineCitationSource,
+} from "@/components/ai-elements/inline-citation";
+import { parseRecommendationCitations } from "@/lib/recommendationCitations";
 
 export function scoreTone(score: number): string {
   if (score >= 80) return "text-emerald-600 dark:text-emerald-400";
@@ -122,13 +137,47 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
             <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
               Recommendations
             </p>
-            <ul className="flex flex-col gap-1.5">
-              {score.recommendations.map((r, i) => (
-                <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-body">
-                  <span className="mt-0.5 text-emerald-600 dark:text-emerald-400">→</span>
-                  {r.message}
-                </li>
-              ))}
+            <ul className="flex flex-col gap-2">
+              {score.recommendations.map((r, i) => {
+                const parsed = parseRecommendationCitations(r.message);
+                return (
+                  <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-body">
+                    <span className="mt-0.5 text-emerald-600 dark:text-emerald-400">→</span>
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <span>{parsed.text}</span>
+                      {parsed.citations.length > 0 ? (
+                        <InlineCitation>
+                          <InlineCitationCard>
+                            <InlineCitationCardTrigger
+                              sources={parsed.citations.map((citation) => citation.url)}
+                            />
+                            <InlineCitationCardBody>
+                              <InlineCitationCarousel>
+                                <InlineCitationCarouselHeader>
+                                  <InlineCitationCarouselPrev />
+                                  <InlineCitationCarouselNext />
+                                  <InlineCitationCarouselIndex />
+                                </InlineCitationCarouselHeader>
+                                <InlineCitationCarouselContent>
+                                  {parsed.citations.map((citation) => (
+                                    <InlineCitationCarouselItem key={`${citation.url}-${citation.label}`}>
+                                      <InlineCitationSource
+                                        title={citation.displayTitle}
+                                        url={citation.url}
+                                        description={citation.description}
+                                      />
+                                    </InlineCitationCarouselItem>
+                                  ))}
+                                </InlineCitationCarouselContent>
+                              </InlineCitationCarousel>
+                            </InlineCitationCardBody>
+                          </InlineCitationCard>
+                        </InlineCitation>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

@@ -11,8 +11,6 @@
  *       (the agent must load /skills/rcs-playbook-rules as its source of truth).
  */
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import BeforeAfterComparison from "@/components/BeforeAfterComparison";
 import { scoreTone } from "@/components/ScorePanel";
@@ -22,8 +20,7 @@ import { improveRcsContent } from "@/lib/improveRcsContent";
 import { scoreRcsContent } from "@/lib/scoreRcsContent";
 
 export default function ImprovePage() {
-  const router = useRouter();
-  const { content, replaceContent, toggles } = useSimulator();
+  const { content, toggles } = useSimulator();
 
   const score = useMemo(() => scoreRcsContent(content), [content]);
   const improved = useMemo(() => improveRcsContent(content, score), [content, score]);
@@ -32,47 +29,30 @@ export default function ImprovePage() {
     [improved],
   );
 
-  function adoptImprovements() {
-    replaceContent(improved.improvedContent);
-    router.push("/");
-  }
-
   return (
     <main className="mx-auto w-full max-w-[1500px] px-5 pb-24 pt-8">
       {/* ── Header: title row + centered step navigation ── */}
       <header className="mb-8 border-b border-line pb-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Link
-              href="/"
-              className="font-mono text-[11px] uppercase tracking-[0.3em] text-accent transition hover:opacity-80"
-            >
-              ← Back to simulator
-            </Link>
-            <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
-              Improvement Studio
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-              Playbook recommendations applied deterministically: shorter text, one CTA with
-              compliant replies, a safer focal point. Overall score{" "}
-              <strong className={scoreTone(score.overallScore)}>{score.overallScore}</strong>
-              {" → "}
-              <strong className={scoreTone(improvedScore.overallScore)}>
-                {improvedScore.overallScore}
-              </strong>
-              .
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={adoptImprovements}
-            className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(14,165,233,0.7)] transition hover:bg-sky-400 active:scale-[0.98]"
-          >
-            Adopt improved content in the editor
-          </button>
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-accent">
+            Naxai · RCS Lab
+          </p>
+          <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
+            Improvement Studio
+          </h1>
         </div>
         <StepNav />
       </header>
+
+      <section className="mb-6 rounded-xl border border-line bg-panel px-4 py-3">
+        <p className="text-sm leading-relaxed text-muted">
+          Deterministic playbook pass: shorter copy, tighter action structure, and safer subject
+          framing for cross-platform consistency. Overall score{" "}
+          <strong className={scoreTone(score.overallScore)}>{score.overallScore}</strong>
+          {" → "}
+          <strong className={scoreTone(improvedScore.overallScore)}>{improvedScore.overallScore}</strong>.
+        </p>
+      </section>
 
       {/* ── Before / after ── */}
       <BeforeAfterComparison
