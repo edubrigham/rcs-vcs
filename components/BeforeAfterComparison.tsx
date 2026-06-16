@@ -1,16 +1,16 @@
 "use client";
 
 /**
- * Phase 2 readout: original vs improved, per platform.
- * Top row: iOS original → iOS improved.
- * Bottom row: Android original → Android improved.
+ * Before→After device grid for the Playbook Pass page. Original | Improved
+ * columns, one row per active platform (driven by the toolbar toggles). Uses
+ * the same full-size device frames as the Draft page. The score and the changes
+ * list live in the page sidebar, not here.
  */
 
 import { scoreTone } from "@/components/ScorePanel";
-import InlineSlideCitation from "@/components/InlineSlideCitation";
 import PlatformPreview from "@/components/PlatformPreview";
 import RcsCardPreview from "@/components/RcsCardPreview";
-import { parseRecommendationCitations } from "@/lib/recommendationCitations";
+import type { PlatformVisibility } from "@/components/RcsInputPanel";
 import type {
   ImprovedRcsContent,
   OverlayToggles,
@@ -25,6 +25,7 @@ interface BeforeAfterComparisonProps {
   improved: ImprovedRcsContent;
   improvedScore: ScoreResult;
   toggles: OverlayToggles;
+  platforms: PlatformVisibility;
 }
 
 function ScoreChip({ value, delta }: { value: number; delta?: number }) {
@@ -46,87 +47,57 @@ export default function BeforeAfterComparison({
   improved,
   improvedScore,
   toggles,
+  platforms,
 }: BeforeAfterComparisonProps) {
   const platformScore = (score: ScoreResult, platform: Platform) =>
     platform === "ios" ? score.iosScore : score.androidScore;
-  const recommendationRows = improved.changes.map(parseRecommendationCitations);
+  const active = (["ios", "android"] as const).filter((p) => platforms[p]);
+  const label = (p: Platform) => (p === "ios" ? "iOS" : "Android");
+
+  if (active.length === 0) {
+    return (
+      <p className="py-20 text-center text-sm text-muted">
+        Enable at least one platform in the toolbar above.
+      </p>
+    );
+  }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
-      <div className="flex flex-col gap-8">
-        {(["ios", "android"] as const).map((platform) => (
-          <div key={platform} className="flex flex-wrap items-start justify-center gap-6">
-            <PlatformPreview
-              platform={platform}
-              caption={`${platform === "ios" ? "iOS" : "Android"} · Original`}
-              scoreChip={<ScoreChip value={platformScore(originalScore, platform)} />}
-            >
-              <RcsCardPreview
-                content={original}
-                platform={platform}
-                toggles={toggles}
-                variant="original"
+    <div className="flex flex-col gap-10">
+      {active.map((platform) => (
+        <div
+          key={platform}
+          className="grid grid-cols-1 justify-items-center gap-y-8 sm:grid-cols-2 sm:gap-x-6"
+        >
+          <PlatformPreview
+            platform={platform}
+            caption={`${label(platform)} · Original`}
+            scoreChip={<ScoreChip value={platformScore(originalScore, platform)} />}
+          >
+            <RcsCardPreview content={original} platform={platform} toggles={toggles} variant="original" />
+          </PlatformPreview>
+
+          <PlatformPreview
+            platform={platform}
+            caption={`${label(platform)} · Improved`}
+            scoreChip={
+              <ScoreChip
+                value={platformScore(improvedScore, platform)}
+                delta={platformScore(improvedScore, platform) - platformScore(originalScore, platform)}
               />
-            </PlatformPreview>
-
-            <div className="hidden self-center text-2xl text-faint sm:block">→</div>
-
-            <PlatformPreview
+            }
+          >
+            <RcsCardPreview
+              content={improved.improvedContent}
               platform={platform}
-              caption={`${platform === "ios" ? "iOS" : "Android"} · Improved`}
-              scoreChip={
-                <ScoreChip
-                  value={platformScore(improvedScore, platform)}
-                  delta={
-                    platformScore(improvedScore, platform) -
-                    platformScore(originalScore, platform)
-                  }
-                />
-              }
-            >
-              <RcsCardPreview
-                content={improved.improvedContent}
-                platform={platform}
-                toggles={toggles}
-                variant="improved"
-                subjectPoint={original.focalPoint}
-                secondaryActions={improved.secondaryActions}
-              />
-            </PlatformPreview>
-          </div>
-        ))}
-      </div>
-
-      {/* applied changes */}
-      <aside className="h-fit rounded-xl border border-[var(--color-secondary)]/30 bg-[var(--color-secondary)]/8 p-4 xl:sticky xl:top-6">
-        <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-secondary)]">
-          Changes applied
-        </p>
-        <p className="mb-3 font-mono text-[11px] text-muted">
-          Overall {originalScore.overallScore} →{" "}
-          <span className={scoreTone(improvedScore.overallScore)}>
-            {improvedScore.overallScore}
-          </span>
-        </p>
-        <ul className="flex flex-col gap-2">
-          {recommendationRows.map((row, i) => (
-            <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-body">
-              <span className="mt-0.5 shrink-0 text-[var(--color-secondary)]">✓</span>
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <span>{row.text}</span>
-                {row.citations.length > 0 ? (
-                  <InlineSlideCitation labels={row.citations.map((citation) => citation.label)} />
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 border-t border-line pt-3 font-mono text-[10px] leading-relaxed text-muted">
-          Deterministic simulation — no AI involved yet. The agent layer
-          (Anthropic Agent SDK + playbook skills) plugs in behind the same
-          interface. See lib/improveRcsContent.ts.
-        </p>
-      </aside>
+              toggles={toggles}
+              variant="improved"
+              subjectPoint={original.focalPoint}
+              secondaryActions={improved.secondaryActions}
+            />
+          </PlatformPreview>
+        </div>
+      ))}
     </div>
   );
 }

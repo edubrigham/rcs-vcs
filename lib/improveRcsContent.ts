@@ -21,7 +21,15 @@ import {
   SAFE_ZONE_RULES,
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";
-import type { CardFormat, ImprovedRcsContent, RcsAction, RcsContent, ScoreResult } from "@/types/rcs";
+import type {
+  CardFormat,
+  ImprovedRcsContent,
+  ImprovementCategory,
+  ImprovementChange,
+  RcsAction,
+  RcsContent,
+  ScoreResult,
+} from "@/types/rcs";
 
 /** Target rendered lines per field so title + description stay within ~3 [xPlatform s11]. */
 const TITLE_TARGET_LINES = 1;
@@ -115,19 +123,22 @@ export function improveRcsContent(
   input: RcsContent,
   scoreResult: ScoreResult,
 ): ImprovedRcsContent {
-  const changes: string[] = [];
+  const changes: ImprovementChange[] = [];
+  const change = (category: ImprovementCategory, message: string) =>
+    changes.push({ category, message });
 
   // 1. Text: shorten until title + description actually render within ~3 lines
   //    on BOTH platforms (line-aware, not character-count — [xPlatform s11]).
   let title = input.title.trim().replace(/\s+/g, " ");
   if (!fitsLines(title, input.cardFormat, "title", TITLE_TARGET_LINES)) {
     title = shortenToLines(title, input.cardFormat, "title", TITLE_TARGET_LINES);
-    changes.push("Shortened the title to a single line to avoid wrapping and iOS truncation (xPlatform s11, s13).");
+    change("text", "Shortened the title to a single line to avoid wrapping and iOS truncation (xPlatform s11, s13).");
   }
   let description = input.description.trim().replace(/\s+/g, " ");
   if (!fitsLines(description, input.cardFormat, "description", DESCRIPTION_TARGET_LINES)) {
     description = shortenToLines(description, input.cardFormat, "description", DESCRIPTION_TARGET_LINES);
-    changes.push(
+    change(
+      "text",
       "Shortened the description so title + description fit the recommended 3 lines on both platforms and reduce Android cropping (xPlatform s11, s15).",
     );
   }
@@ -150,7 +161,8 @@ export function improveRcsContent(
     actions = primaryCta ? [{ ...primaryCta, primary: true }, ...keptReplies] : keptReplies;
     secondaryActions = [...movedCtas, ...droppedReplies];
     if (movedCtas.length > 0) {
-      changes.push(
+      change(
+        "actions",
         `Kept the primary CTA (“${primaryCta!.label}”)${
           keptReplies.length > 0
             ? ` and ${keptReplies.length} suggested repl${keptReplies.length > 1 ? "ies" : "y"}`
@@ -159,18 +171,19 @@ export function improveRcsContent(
       );
     }
     if (droppedReplies.length > 0) {
-      changes.push(
+      change(
+        "actions",
         `Moved ${droppedReplies.length} repl${droppedReplies.length > 1 ? "ies" : "y"} beyond the 3-per-card limit out of the card (xPlatform s17).`,
       );
     }
   } else if (primaryCta && input.actions[0]?.id !== primaryCta.id) {
     actions = [{ ...primaryCta, primary: true }, ...input.actions.filter((a) => a.id !== primaryCta.id)];
-    changes.push("Placed the CTA action first — iOS always shows actions above replies (xPlatform s21).");
+    change("actions", "Placed the CTA action first — iOS always shows actions above replies (xPlatform s21).");
   }
   actions = actions.map((a) => {
     if (a.label.length > SUGGESTION_RULES.maxSuggestionLabelChars) {
       const label = shorten(a.label, SUGGESTION_RULES.maxSuggestionLabelChars);
-      changes.push(`Trimmed the CTA label to the 25-character suggestion limit (xPlatform s17).`);
+      change("actions", `Trimmed the CTA label to the 25-character suggestion limit (xPlatform s17).`);
       return { ...a, label };
     }
     return a;
@@ -204,7 +217,8 @@ export function improveRcsContent(
     if (!insideCrop) {
       focalPoint = { x: 0.5, y: 0.5 };
       recropped = true;
-      changes.push(
+      change(
+        "image",
         "The subject was outside the Android visible crop area — the simulated re-crop re-centers it. Export the asset with the subject near the center (Card Media p12).",
       );
     } else if (!insideSafeZone) {
@@ -213,12 +227,14 @@ export function improveRcsContent(
         y: clamp(focalPoint.y, SAFE_LO + 0.1, SAFE_HI - 0.1),
       };
       recropped = true;
-      changes.push(
+      change(
+        "image",
         "The subject sat outside the central safe zone — the simulated re-crop pulls it back inside (Card Media p39).",
       );
     }
     if (recropped) {
-      changes.push(
+      change(
+        "image",
         "Simulated a tighter, subject-centered re-crop so the subject fills the frame instead of floating in dead space — export the real asset with this crop (Card Media p39).",
       );
     }
@@ -228,13 +244,15 @@ export function improveRcsContent(
   let cardFormat = input.cardFormat;
   if (cardFormat === "medium") {
     cardFormat = "tall";
-    changes.push(
+    change(
+      "format",
       "Switched to the Tall (3:2) card — Google's recommended format for cross-platform parity (xPlatform s13).",
     );
   }
 
   if (changes.length === 0) {
-    changes.push(
+    change(
+      "general",
       scoreResult.warnings.length === 0
         ? "Content already follows the playbook recommendations — no changes applied."
         : "No automatic fix available for the remaining warnings — review them manually.",

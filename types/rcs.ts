@@ -91,11 +91,20 @@ export interface ScoreResult {
   recommendations: Recommendation[];
 }
 
+/** Which part of the card an improvement change applies to (for grouping). */
+export type ImprovementCategory = "text" | "image" | "actions" | "format" | "general";
+
+export interface ImprovementChange {
+  category: ImprovementCategory;
+  /** Human-readable change, ending with a "(citation)" the UI parses into chips. */
+  message: string;
+}
+
 export interface ImprovedRcsContent {
   improvedContent: RcsContent;
   /** Non-primary actions moved out of the card [xPlatform s11: a single CTA]. */
   secondaryActions: RcsAction[];
-  changes: string[];
+  changes: ImprovementChange[];
 }
 
 export interface OverlayToggles {

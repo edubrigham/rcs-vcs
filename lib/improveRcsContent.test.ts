@@ -40,7 +40,7 @@ describe("line-aware shortening (BUG-2/3)", () => {
       DEFAULT_CONTENT,
       scoreRcsContent(DEFAULT_CONTENT),
     );
-    if (changes.some((c) => /recommended 3 lines/.test(c))) {
+    if (changes.some((c) => /recommended 3 lines/.test(c.message))) {
       expect(totalLines(improvedContent, "android", improvedContent.cardFormat)).toBeLessThanOrEqual(3);
     }
   });
@@ -49,12 +49,12 @@ describe("line-aware shortening (BUG-2/3)", () => {
 describe("re-crop change is gated (BUG-6)", () => {
   it("does NOT emit the re-crop change when the focal is already centered", () => {
     const out = improveRcsContent(CLEAN, scoreRcsContent(CLEAN));
-    expect(out.changes.some((c) => /re-crop/.test(c))).toBe(false);
+    expect(out.changes.some((c) => /re-crop/.test(c.message))).toBe(false);
   });
   it("DOES emit it when the subject is outside the crop", () => {
     const offscreen: RcsContent = { ...CLEAN, focalPoint: { x: 0.98, y: 0.02 } };
     const out = improveRcsContent(offscreen, scoreRcsContent(offscreen));
-    expect(out.changes.some((c) => /re-crop/.test(c))).toBe(true);
+    expect(out.changes.some((c) => /re-crop/.test(c.message))).toBe(true);
   });
 });
 
@@ -69,14 +69,14 @@ describe("suggestion ordering & format (s21, s13)", () => {
     };
     const out = improveRcsContent(replyFirst, scoreRcsContent(replyFirst));
     expect(out.improvedContent.actions[0].type).not.toBe("reply");
-    expect(out.changes.some((c) => /s21/.test(c))).toBe(true);
+    expect(out.changes.some((c) => /s21/.test(c.message))).toBe(true);
   });
 
   it("switches a medium card to tall (s13)", () => {
     const medium: RcsContent = { ...CLEAN, cardFormat: "medium" };
     const out = improveRcsContent(medium, scoreRcsContent(medium));
     expect(out.improvedContent.cardFormat).toBe("tall");
-    expect(out.changes.some((c) => /Tall/.test(c))).toBe(true);
+    expect(out.changes.some((c) => /Tall/.test(c.message))).toBe(true);
   });
 });
 
