@@ -266,6 +266,7 @@ export function recommendedAspectForFormat(cardFormat: CardFormat): {
     case "medium":
       return { aspect: 21 / 9, label: "21:9", citation: "Card Media Playbook p8" };
     case "tall":
-      return { aspect: 3 / 2, label: "3:2", citation: "Card Media Playbook p8 / xPlatform s12" };
+      // Comma-separated so the citation parser splits the two sources.
+      return { aspect: 3 / 2, label: "3:2", citation: "Card Media Playbook p8, xPlatform s12" };
   }
 }
