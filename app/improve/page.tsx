@@ -77,17 +77,9 @@ export default function ImprovePage() {
             toggles={toggles}
             onTogglesChange={setToggles}
           />
-          <div className="px-4 py-6 sm:px-6">
-            {/* Save changes — top-right of the viewport, under the filters */}
-            <div className="mb-4 flex justify-end">
-              <button
-                type="button"
-                onClick={saveChanges}
-                className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(14,165,233,0.7)] transition hover:opacity-90 active:scale-[0.98]"
-              >
-                Save changes
-              </button>
-            </div>
+          {/* Device area uses the SAME container as Draft (p-6 pb-2, centered)
+              so the frames sit in the exact same spot across pages. */}
+          <div className="p-6 pb-2">
             <BeforeAfterComparison
               original={content}
               originalScore={score}
@@ -96,6 +88,16 @@ export default function ImprovePage() {
               toggles={toggles}
               platforms={singlePlatform}
             />
+          </div>
+          {/* Save changes — bottom-right of the viewport */}
+          <div className="flex justify-end px-6 pb-6 pt-2">
+            <button
+              type="button"
+              onClick={saveChanges}
+              className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(14,165,233,0.7)] transition hover:opacity-90 active:scale-[0.98]"
+            >
+              Save changes
+            </button>
           </div>
         </div>
       </div>

@@ -28,16 +28,20 @@ interface BeforeAfterComparisonProps {
   platforms: PlatformVisibility;
 }
 
-function ScoreChip({ value, delta }: { value: number; delta?: number }) {
+/** Below-device label: "Original"/"Improved" + score chip (+ delta). */
+function Footer({ label, value, delta }: { label: string; value: number; delta?: number }) {
   return (
-    <span className="flex items-center gap-1.5 rounded-full border border-line bg-field px-2 py-0.5 font-mono text-[11px]">
-      <span className={`font-semibold ${scoreTone(value)}`}>{value}</span>
-      {delta !== undefined && delta !== 0 && (
-        <span className={delta > 0 ? "text-[var(--color-secondary)]" : "text-[var(--color-destructive)]"}>
-          {delta > 0 ? `▲ +${delta}` : `▼ ${delta}`}
-        </span>
-      )}
-    </span>
+    <>
+      <span className="font-mono text-[12px] font-semibold tracking-[0.15em] text-muted">{label}</span>
+      <span className="flex items-center gap-1.5 rounded-full border border-line bg-field px-2 py-0.5 font-mono text-[11px]">
+        <span className={`font-semibold ${scoreTone(value)}`}>{value}</span>
+        {delta !== undefined && delta !== 0 && (
+          <span className={delta > 0 ? "text-[var(--color-secondary)]" : "text-[var(--color-destructive)]"}>
+            {delta > 0 ? `▲ +${delta}` : `▼ ${delta}`}
+          </span>
+        )}
+      </span>
+    </>
   );
 }
 
@@ -65,23 +69,23 @@ export default function BeforeAfterComparison({
   return (
     <div className="flex flex-col gap-10">
       {active.map((platform) => (
-        <div
-          key={platform}
-          className="grid grid-cols-1 justify-items-center gap-y-8 sm:grid-cols-2 sm:gap-x-6"
-        >
+        // Same container as the Draft preview area (flex, centered, gap-8) so the
+        // device frames land in the exact same spot when switching pages.
+        <div key={platform} className="flex flex-wrap items-start justify-center gap-8">
           <PlatformPreview
             platform={platform}
-            caption={`${label(platform)} · Original`}
-            scoreChip={<ScoreChip value={platformScore(originalScore, platform)} />}
+            caption={label(platform)}
+            footer={<Footer label="Original" value={platformScore(originalScore, platform)} />}
           >
             <RcsCardPreview content={original} platform={platform} toggles={toggles} variant="original" />
           </PlatformPreview>
 
           <PlatformPreview
             platform={platform}
-            caption={`${label(platform)} · Improved`}
-            scoreChip={
-              <ScoreChip
+            caption={label(platform)}
+            footer={
+              <Footer
+                label="Improved"
                 value={platformScore(improvedScore, platform)}
                 delta={platformScore(improvedScore, platform) - platformScore(originalScore, platform)}
               />

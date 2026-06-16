@@ -16,6 +16,12 @@ interface PlatformPreviewProps {
   caption?: string;
   /** Score chip rendered next to the caption. */
   scoreChip?: ReactNode;
+  /**
+   * Content rendered BELOW the device frame (label, score chip, …). Kept below
+   * so it never shifts the frame's position — letting Draft and Playbook Pass
+   * align the device frames pixel-for-pixel.
+   */
+  footer?: ReactNode;
 }
 
 export default function PlatformPreview({
@@ -23,6 +29,7 @@ export default function PlatformPreview({
   children,
   caption,
   scoreChip,
+  footer,
 }: PlatformPreviewProps) {
   const isIos = platform === "ios";
   const [platformLabel, detailLabel] = (caption ?? "").split("·").map((part) => part.trim());
@@ -100,6 +107,7 @@ export default function PlatformPreview({
         </div>
       </div>
 
+      {footer ? <div className="flex items-center gap-2">{footer}</div> : null}
     </div>
   );
 }
