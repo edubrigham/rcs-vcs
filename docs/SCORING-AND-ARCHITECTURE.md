@@ -80,6 +80,48 @@ not low — a deliberate (and debatable) product choice worth naming.
 
 ---
 
+## Scope boundaries — what we deliberately do not score (and what's missing)
+
+The unit of analysis is **one rich card / one message turn**. `RcsContent` is a
+single card: title, description, one image, suggestions, format. There is no
+conversation history, no preceding/following messages, no turn order. Two
+buckets follow from that — and they are different things:
+
+### Defensible boundaries (out of scope by construction)
+
+- **The slide 32–41 suggestion-behaviour matrix.** Those slides describe how
+  suggestions render *following* a text/card/carousel and how mixes behave
+  *across turns* (persistent vs. transient on Android). A single-card payload
+  can't express any of it. We distil only the one single-card-relevant rule from
+  that range: iOS collapses >2 actions into an "Options" dropdown (s42). Full
+  fidelity needs a **conversation-level model** (`Turn[]`), not a card — which is
+  naturally an agent-layer concern, not a scorer concern.
+- **Device variability** (font size, orientation) — surfaced as a caveat, not
+  computed; the playbook itself says the 3-line budget varies by device.
+
+### Actual gaps vs. the stated goal (backlog, not boundaries)
+
+These are in the brief ("verify the images and content … score for Apple-only
+and Android-only", and the carousel example) but **not yet modelled** — they are
+genuine gaps, not scoping decisions:
+
+- **Carousels.** The brief explicitly asks for a 3-product carousel; the format
+  enum is single-card only (`compact|medium|tall`). Carousel media tables
+  (CardMedia) and carousel text/CTA rules (s14) are unscored. This is the
+  largest gap.
+- **Image *file* validation.** "Verify the images" implies checking format
+  (JPEG/PNG/GIF), file size (≤100 MB), and resolution against the 1080p
+  baseline. We score *aspect ratio and crop* but never inspect the file itself.
+- **GIF-not-animated-on-iOS** (s11) and **video** media specifics — unhandled.
+- **Hard character caps** (3072 body, 200/2000 overflow page) and **link-preview
+  behaviour** (s9–10, s27) — unhandled (no hyperlink-in-text concept).
+
+Naming these explicitly keeps the line clear: the conversation matrix is a
+*different model*; carousels and file validation are *missing coverage of the
+current model's goal* and belong on the roadmap.
+
+---
+
 ## C. Why it's architecturally sound (for production)
 
 1. **Pure, deterministic core.** `(content) → result`, no side effects. This is
