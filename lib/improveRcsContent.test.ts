@@ -72,11 +72,11 @@ describe("suggestion ordering & format (s21, s13)", () => {
     expect(out.changes.some((c) => /s21/.test(c.message))).toBe(true);
   });
 
-  it("switches a medium card to tall (s13)", () => {
+  it("keeps the selected Medium format but advises Tall (s13)", () => {
     const medium: RcsContent = { ...CLEAN, cardFormat: "medium" };
     const out = improveRcsContent(medium, scoreRcsContent(medium));
-    expect(out.improvedContent.cardFormat).toBe("tall");
-    expect(out.changes.some((c) => /Tall/.test(c.message))).toBe(true);
+    expect(out.improvedContent.cardFormat).toBe("medium");
+    expect(out.changes.some((c) => c.category === "format" && /Tall/.test(c.message))).toBe(true);
   });
 });
 

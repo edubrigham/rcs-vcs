@@ -240,13 +240,14 @@ export function improveRcsContent(
     }
   }
 
-  // 4. Format: medium vertical cards diverge most across platforms.
-  let cardFormat = input.cardFormat;
+  // 4. Format: keep the author's selected format — it is the view control on
+  //    the Playbook Pass, and silently switching medium→tall made every
+  //    medium card render identically to a tall one. Surface Tall as advice.
+  const cardFormat = input.cardFormat;
   if (cardFormat === "medium") {
-    cardFormat = "tall";
     change(
       "format",
-      "Switched to the Tall (3:2) card — Google's recommended format for cross-platform parity (xPlatform s13).",
+      "Kept the Medium format you selected; for the best cross-platform parity consider the Tall (3:2) card, which renders most consistently (xPlatform s13).",
     );
   }
 

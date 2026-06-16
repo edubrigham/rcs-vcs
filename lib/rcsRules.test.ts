@@ -72,6 +72,15 @@ describe("getPlatformRules — key playbook facts", () => {
     expect(r.mediaLayout).toBe("horizontal");
   });
 
+  it("gives each vertical format a DISTINCT media height (medium 21:9 ≠ tall 3:2)", () => {
+    const medium = getPlatformRules("android", "medium", 0);
+    const tall = getPlatformRules("android", "tall", 0);
+    expect(medium.mediaHeight).toBe(Math.round(medium.mediaWidth / (21 / 9)));
+    expect(tall.mediaHeight).toBe(Math.round(tall.mediaWidth / (3 / 2)));
+    expect(medium.mediaHeight).not.toBe(tall.mediaHeight);
+    expect(tall.mediaHeight).toBeGreaterThan(medium.mediaHeight);
+  });
+
   it("keeps a FIXED media-box size per format regardless of text (crop is the punch-in, not the box)", () => {
     const low = getPlatformRules("android", "compact", 2);
     const high = getPlatformRules("android", "compact", 8);
