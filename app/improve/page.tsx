@@ -103,11 +103,6 @@ export default function ImprovePage() {
           </div>
         </div>
       </div>
-
-      <footer className="mt-16 border-t border-line pt-5 font-mono text-[10px] leading-relaxed text-faint">
-        Rendering rules sourced from Google&apos;s RCS for Business playbooks: Card Media Playbook
-        (March 2026) &amp; X-Platform Playbook (April 2026). Local MVP — no data leaves the browser.
-      </footer>
     </main>
   );
 }
