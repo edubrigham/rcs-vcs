@@ -6,6 +6,11 @@
  *
  * No AI involved: every number traces back to a playbook rule (see citations)
  * or an explicit threshold in this file.
+ *
+ * Structure: `scoreRcsContent` composes four independent, pure sub-scorers —
+ * `scoreText`, `scoreImage`, `scoreActions`, `scoreLayout`. Each is exported so
+ * it can be unit-tested in isolation. None of them mutate shared state; the
+ * composer aggregates their results.
  */
 
 import {
@@ -24,7 +29,6 @@ import {
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";
 import type {
-  Platform,
   RcsContent,
   Recommendation,
   ScoreResult,
@@ -36,22 +40,26 @@ const WEIGHTS = { image: 0.35, text: 0.3, actions: 0.2, layout: 0.15 } as const;
 const SAFE_LO = (1 - SAFE_ZONE_RULES.centralFraction) / 2; // 0.2
 const SAFE_HI = 1 - SAFE_LO; // 0.8
 
-interface PlatformBreakdown {
-  image: number;
-  text: number;
-  actions: number;
+/** A per-platform sub-score plus the warnings/recommendations it raised. */
+export interface SubScore {
+  ios: number;
+  android: number;
+  warnings: Warning[];
+  recommendations: Recommendation[];
 }
 
-export function scoreRcsContent(content: RcsContent): ScoreResult {
+/** Layout risk is platform-agnostic: a single score for both platforms. */
+export interface LayoutScore {
+  score: number;
+  warnings: Warning[];
+  recommendations: Recommendation[];
+}
+
+// ───────────────────────────── Text fit (30%) ─────────────────────────────
+export function scoreText(content: RcsContent): SubScore {
   const warnings: Warning[] = [];
   const recommendations: Recommendation[] = [];
 
-  const perPlatform: Record<Platform, PlatformBreakdown> = {
-    ios: { image: 100, text: 100, actions: 100 },
-    android: { image: 100, text: 100, actions: 100 },
-  };
-
-  // ───────────────────────── Text fit (30%) ─────────────────────────
   const iosLines = estimateTextLines(
     content.title,
     content.description,
@@ -67,7 +75,7 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
 
   const iosTitleOverflow = Math.max(0, iosLines.titleLines - iosRules.maxTitleLines);
   const iosDescOverflow = Math.max(0, iosLines.descriptionLines - iosRules.maxDescriptionLines);
-  perPlatform.ios.text = clamp(100 - 15 * (iosTitleOverflow + iosDescOverflow), 20, 100);
+  let iosText = clamp(100 - 15 * (iosTitleOverflow + iosDescOverflow), 20, 100);
 
   if (iosTitleOverflow > 0) {
     warnings.push({
@@ -97,7 +105,7 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
       recommendation:
         "Keep title + description within 6 total lines so users never lose the CTA (xPlatform Playbook s23).",
     });
-    perPlatform.ios.text = clamp(perPlatform.ios.text - 20, 10, 100);
+    iosText = clamp(iosText - 20, 10, 100);
   } else if (iosLines.totalLines > IOS_RULES.maxRecommendedTextLines) {
     warnings.push({
       severity: "info",
@@ -113,7 +121,7 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
     0,
     androidLines.descriptionLines - androidRules.maxDescriptionLines,
   );
-  perPlatform.android.text = clamp(100 - 8 * androidDescOverflow, 30, 100);
+  const androidText = clamp(100 - 8 * androidDescOverflow, 30, 100);
   if (androidDescOverflow > 1) {
     warnings.push({
       severity: "info",
@@ -125,7 +133,14 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
     });
   }
 
-  // ─────────────────── Image & safe zone (35%) ───────────────────
+  return { ios: iosText, android: androidText, warnings, recommendations };
+}
+
+// ─────────────────────────── Image & safe zone (35%) ───────────────────────
+export function scoreImage(content: RcsContent): SubScore {
+  const warnings: Warning[] = [];
+  const recommendations: Recommendation[] = [];
+
   let imageScoreIos = 100;
   let imageScoreAndroid = 100;
 
@@ -139,139 +154,147 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
       message: "No media uploaded yet — rich cards perform best with an image.",
       recommendation: "Upload an image to evaluate cropping and safe-zone risk.",
     });
-  } else {
-    const aspect = content.imageMetadata.aspectRatio;
-    const focal = content.focalPoint;
+    return { ios: imageScoreIos, android: imageScoreAndroid, warnings, recommendations };
+  }
 
-    // Android: center crop into the format's media container [xPlatform s28].
-    const androidWindow = getVisibleWindow(
-      aspect,
-      androidRules.mediaWidth / androidRules.mediaHeight,
+  const androidLines = estimateTextLines(
+    content.title,
+    content.description,
+    getPlatformRules("android", content.cardFormat, 0),
+  );
+  const androidRules = getPlatformRules("android", content.cardFormat, androidLines.totalLines);
+
+  const aspect = content.imageMetadata.aspectRatio;
+  const focal = content.focalPoint;
+
+  // Android: center crop into the format's media container [xPlatform s28].
+  const androidWindow = getVisibleWindow(aspect, androidRules.mediaWidth / androidRules.mediaHeight);
+  const focalInsideAndroidCrop = pointInWindow(focal, androidWindow);
+  const focalInsideSafeZone =
+    focal.x >= SAFE_LO && focal.x <= SAFE_HI && focal.y >= SAFE_LO && focal.y <= SAFE_HI;
+
+  if (!focalInsideAndroidCrop) {
+    imageScoreAndroid = 30;
+    warnings.push({
+      severity: "critical",
+      platform: "android",
+      category: "image",
+      message: "The focal point is outside the Android visible crop area.",
+      recommendation:
+        "Move the subject toward the image center or re-crop the asset — Android center-crops media to the card container (Card Media Playbook p12).",
+    });
+  } else if (!focalInsideSafeZone) {
+    imageScoreAndroid = 65;
+    warnings.push({
+      severity: "warning",
+      platform: "both",
+      category: "image",
+      message: "The focal point sits near the image edge, outside the central safe zone.",
+      recommendation:
+        "Keep critical content (logo, product, face) inside the central safe zone (Card Media Playbook p39).",
+    });
+  }
+
+  if (androidRules.cropSeverity !== "low") {
+    // Lost AREA, not just height: cover-cropping cuts whichever axis overflows.
+    const lost = Math.round((1 - visibleAreaFraction(androidWindow)) * 100);
+    warnings.push({
+      severity: androidRules.cropSeverity === "high" ? "warning" : "info",
+      platform: "android",
+      category: "image",
+      message: `Android crop becomes more severe because the card text is long${
+        lost > 0 ? ` (~${lost}% of the image is cropped away)` : ""
+      }.`,
+      recommendation:
+        "Shorten title/description to give the media more room (xPlatform Playbook s15).",
+    });
+    imageScoreAndroid = clamp(
+      imageScoreAndroid - (androidRules.cropSeverity === "high" ? 12 : 6),
+      0,
+      100,
     );
-    const focalInsideAndroidCrop = pointInWindow(focal, androidWindow);
-    const focalInsideSafeZone =
-      focal.x >= SAFE_LO && focal.x <= SAFE_HI && focal.y >= SAFE_LO && focal.y <= SAFE_HI;
+  }
 
-    if (!focalInsideAndroidCrop) {
-      imageScoreAndroid = 30;
-      warnings.push({
-        severity: "critical",
-        platform: "android",
-        category: "image",
-        message: "The focal point is outside the Android visible crop area.",
-        recommendation:
-          "Move the subject toward the image center or re-crop the asset — Android center-crops media to the card container (Card Media Playbook p12).",
-      });
-    } else if (!focalInsideSafeZone) {
-      imageScoreAndroid = 65;
+  // iOS: compact format renders a 60x60 DP square thumbnail [xPlatform s15].
+  if (content.cardFormat === "compact") {
+    const square = criticalSquareWindow(aspect);
+    if (!pointInWindow(focal, square)) {
+      imageScoreIos = clamp(imageScoreIos - 35, 0, 100);
       warnings.push({
         severity: "warning",
-        platform: "both",
+        platform: "ios",
         category: "image",
-        message: "The focal point sits near the image edge, outside the central safe zone.",
+        message:
+          "The focal point falls outside the centered 1:1 critical content area — it may be cut from the iOS 60×60 DP thumbnail.",
         recommendation:
-          "Keep critical content (logo, product, face) inside the central safe zone (Card Media Playbook p39).",
+          "Place critical content in the centered square of the image (xPlatform Playbook s16).",
       });
     }
-
-    if (androidRules.cropSeverity !== "low") {
-      // Lost AREA, not just height: cover-cropping cuts whichever axis overflows.
-      const lost = Math.round((1 - visibleAreaFraction(androidWindow)) * 100);
+    if (aspect > 1.4 || aspect < 0.4) {
+      imageScoreIos = clamp(imageScoreIos - 10, 0, 100);
       warnings.push({
-        severity: androidRules.cropSeverity === "high" ? "warning" : "info",
-        platform: "android",
+        severity: "warning",
+        platform: "ios",
         category: "image",
-        message: `Android crop becomes more severe because the card text is long${
-          lost > 0 ? ` (~${lost}% of the image is cropped away)` : ""
-        }.`,
+        message: "The image may not work well as a 60×60 DP thumbnail.",
         recommendation:
-          "Shorten title/description to give the media more room (xPlatform Playbook s15).",
+          "Use a 9:16 asset with the subject centered; iOS shows only a tiny square of it (xPlatform Playbook s15-s16).",
       });
-      imageScoreAndroid = clamp(
-        imageScoreAndroid - (androidRules.cropSeverity === "high" ? 12 : 6),
-        0,
-        100,
-      );
     }
-
-    // iOS: compact format renders a 60x60 DP square thumbnail [xPlatform s15].
-    if (content.cardFormat === "compact") {
-      const square = criticalSquareWindow(aspect);
-      if (!pointInWindow(focal, square)) {
-        imageScoreIos = clamp(imageScoreIos - 35, 0, 100);
-        warnings.push({
-          severity: "warning",
-          platform: "ios",
-          category: "image",
-          message:
-            "The focal point falls outside the centered 1:1 critical content area — it may be cut from the iOS 60×60 DP thumbnail.",
-          recommendation:
-            "Place critical content in the centered square of the image (xPlatform Playbook s16).",
-        });
-      }
-      if (aspect > 1.4 || aspect < 0.4) {
-        imageScoreIos = clamp(imageScoreIos - 10, 0, 100);
-        warnings.push({
-          severity: "warning",
-          platform: "ios",
-          category: "image",
-          message: "The image may not work well as a 60×60 DP thumbnail.",
-          recommendation:
-            "Use a 9:16 asset with the subject centered; iOS shows only a tiny square of it (xPlatform Playbook s15-s16).",
-        });
-      }
-      if (!focalInsideSafeZone) {
-        imageScoreIos = clamp(imageScoreIos - 15, 0, 100);
-      }
-    } else {
-      // iOS vertical cards keep native aspect unless extreme [CardMedia p28].
-      const extreme =
-        aspect > IOS_RULES.extremeAspectAbove || aspect < IOS_RULES.extremeAspectBelow;
-      if (extreme) {
-        imageScoreIos = clamp(imageScoreIos - 25, 0, 100);
-        warnings.push({
-          severity: "warning",
-          platform: "ios",
-          category: "image",
-          message:
-            "Extreme aspect ratio: iOS only preserves the native ratio for non-extreme media; this asset may be cropped or look oversized.",
-          recommendation:
-            "Stick to 3:2 or 4:3 for cross-platform vertical cards (Card Media Playbook p28-p29).",
-        });
-      }
-      if (!focalInsideSafeZone) {
-        imageScoreIos = clamp(imageScoreIos - 20, 0, 100);
-      }
-      if (aspect < 1) {
-        warnings.push({
-          severity: "info",
-          platform: "both",
-          category: "image",
-          message:
-            "Portrait media renders very differently across platforms: iOS shows it natively (tall card), Android center-crops it into the fixed container.",
-          recommendation:
-            "Prefer landscape 3:2 media for vertical cards (xPlatform Playbook s28-s29).",
-        });
-      }
+    if (!focalInsideSafeZone) {
+      imageScoreIos = clamp(imageScoreIos - 15, 0, 100);
     }
-
-    // Recommended source ratio per format.
-    const rec = recommendedAspectForFormat(content.cardFormat);
-    if (Math.abs(aspect - rec.aspect) / rec.aspect > 0.25) {
+  } else {
+    // iOS vertical cards keep native aspect unless extreme [CardMedia p28].
+    const extreme = aspect > IOS_RULES.extremeAspectAbove || aspect < IOS_RULES.extremeAspectBelow;
+    if (extreme) {
+      imageScoreIos = clamp(imageScoreIos - 25, 0, 100);
+      warnings.push({
+        severity: "warning",
+        platform: "ios",
+        category: "image",
+        message:
+          "Extreme aspect ratio: iOS only preserves the native ratio for non-extreme media; this asset may be cropped or look oversized.",
+        recommendation:
+          "Stick to 3:2 or 4:3 for cross-platform vertical cards (Card Media Playbook p28-p29).",
+      });
+    }
+    if (!focalInsideSafeZone) {
+      imageScoreIos = clamp(imageScoreIos - 20, 0, 100);
+    }
+    if (aspect < 1) {
       warnings.push({
         severity: "info",
         platform: "both",
         category: "image",
-        message: `The uploaded image (${aspect.toFixed(2)}:1) deviates from the recommended ${rec.label} ratio for this format.`,
-        recommendation: `Export the asset at ${rec.label} (${rec.citation}).`,
+        message:
+          "Portrait media renders very differently across platforms: iOS shows it natively (tall card), Android center-crops it into the fixed container.",
+        recommendation:
+          "Prefer landscape 3:2 media for vertical cards (xPlatform Playbook s28-s29).",
       });
     }
   }
 
-  perPlatform.ios.image = imageScoreIos;
-  perPlatform.android.image = imageScoreAndroid;
+  // Recommended source ratio per format.
+  const rec = recommendedAspectForFormat(content.cardFormat);
+  if (Math.abs(aspect - rec.aspect) / rec.aspect > 0.25) {
+    warnings.push({
+      severity: "info",
+      platform: "both",
+      category: "image",
+      message: `The uploaded image (${aspect.toFixed(2)}:1) deviates from the recommended ${rec.label} ratio for this format.`,
+      recommendation: `Export the asset at ${rec.label} (${rec.citation}).`,
+    });
+  }
 
-  // ───────────────────── Suggested actions (20%) ─────────────────────
+  return { ios: imageScoreIos, android: imageScoreAndroid, warnings, recommendations };
+}
+
+// ───────────────────────── Suggested actions (20%) ─────────────────────────
+export function scoreActions(content: RcsContent): SubScore {
+  const warnings: Warning[] = [];
+  const recommendations: Recommendation[] = [];
+
   // The playbooks treat suggested ACTIONS (device actions: open URL, dial)
   // and suggested REPLIES differently: the recommended pattern is a single
   // CTA action plus up to 3 replies [xPlatform s11, s17], and only ACTIONS
@@ -389,10 +412,26 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
     });
   }
 
-  perPlatform.ios.actions = iosActionScore;
-  perPlatform.android.actions = androidActionScore;
+  return { ios: iosActionScore, android: androidActionScore, warnings, recommendations };
+}
 
-  // ─────────────────── Layout / platform risk (15%) ───────────────────
+// ─────────────────────── Layout / platform risk (15%) ──────────────────────
+export function scoreLayout(content: RcsContent): LayoutScore {
+  const warnings: Warning[] = [];
+  const recommendations: Recommendation[] = [];
+
+  const iosLines = estimateTextLines(
+    content.title,
+    content.description,
+    getPlatformRules("ios", content.cardFormat, 0),
+  );
+  const androidLines = estimateTextLines(
+    content.title,
+    content.description,
+    getPlatformRules("android", content.cardFormat, 0),
+  );
+  const androidRules = getPlatformRules("android", content.cardFormat, androidLines.totalLines);
+
   let layoutScore = 100;
   if (iosLines.totalLines > IOS_RULES.tappableOverflowTotalLines) layoutScore -= 20;
   else if (iosLines.totalLines > IOS_RULES.maxRecommendedTextLines) layoutScore -= 10;
@@ -408,16 +447,45 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
   }
   layoutScore = clamp(layoutScore, 20, 100);
 
-  // ───────────────────────── Aggregate ─────────────────────────
-  const platformTotal = (p: PlatformBreakdown) =>
-    WEIGHTS.image * p.image +
-    WEIGHTS.text * p.text +
-    WEIGHTS.actions * p.actions +
-    WEIGHTS.layout * layoutScore;
+  return { score: layoutScore, warnings, recommendations };
+}
 
-  const imageSafeZoneScore = Math.round((imageScoreIos + imageScoreAndroid) / 2);
-  const textFitScore = Math.round((perPlatform.ios.text + perPlatform.android.text) / 2);
-  const actionScore = Math.round((iosActionScore + androidActionScore) / 2);
+// ───────────────────────────── Composition ─────────────────────────────────
+export function scoreRcsContent(content: RcsContent): ScoreResult {
+  const text = scoreText(content);
+  const image = scoreImage(content);
+  const actions = scoreActions(content);
+  const layout = scoreLayout(content);
+
+  // Push order (text, image, actions, layout) drives recommendation order;
+  // the returned warnings list is sorted by severity separately.
+  const orderedWarnings = [
+    ...text.warnings,
+    ...image.warnings,
+    ...actions.warnings,
+    ...layout.warnings,
+  ];
+
+  // Standalone recommendations first (actions, then layout), then every
+  // warning's recommendation in push order, de-duplicated.
+  const recommendations: Recommendation[] = [
+    ...actions.recommendations,
+    ...layout.recommendations,
+  ];
+  const seen = new Set(recommendations.map((r) => r.message));
+  for (const w of orderedWarnings) {
+    if (w.recommendation && !seen.has(w.recommendation)) {
+      seen.add(w.recommendation);
+      recommendations.push({ category: w.category, message: w.recommendation });
+    }
+  }
+
+  const warnings = sortWarnings(orderedWarnings);
+
+  const imageSafeZoneScore = Math.round((image.ios + image.android) / 2);
+  const textFitScore = Math.round((text.ios + text.android) / 2);
+  const actionScore = Math.round((actions.ios + actions.android) / 2);
+  const layoutScore = layout.score;
 
   const overallScore = Math.round(
     WEIGHTS.image * imageSafeZoneScore +
@@ -426,24 +494,18 @@ export function scoreRcsContent(content: RcsContent): ScoreResult {
       WEIGHTS.layout * layoutScore,
   );
 
-  // Surface every warning's recommendation, de-duplicated.
-  const seen = new Set(recommendations.map((r) => r.message));
-  for (const w of warnings) {
-    if (w.recommendation && !seen.has(w.recommendation)) {
-      seen.add(w.recommendation);
-      recommendations.push({ category: w.category, message: w.recommendation });
-    }
-  }
+  const platformTotal = (img: number, txt: number, act: number) =>
+    WEIGHTS.image * img + WEIGHTS.text * txt + WEIGHTS.actions * act + WEIGHTS.layout * layoutScore;
 
   return {
     overallScore,
-    iosScore: Math.round(platformTotal(perPlatform.ios)),
-    androidScore: Math.round(platformTotal(perPlatform.android)),
+    iosScore: Math.round(platformTotal(image.ios, text.ios, actions.ios)),
+    androidScore: Math.round(platformTotal(image.android, text.android, actions.android)),
     imageSafeZoneScore,
     textFitScore,
     actionScore,
     layoutScore,
-    warnings: sortWarnings(warnings),
+    warnings,
     recommendations,
   };
 }
