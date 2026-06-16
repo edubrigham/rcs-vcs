@@ -8,7 +8,7 @@
  */
 
 import type { ReactNode } from "react";
-import type { CardFormat, OverlayToggles } from "@/types/rcs";
+import type { CardFormat, OverlayToggles, Platform } from "@/types/rcs";
 import type { PlatformVisibility } from "@/components/RcsInputPanel";
 
 const DISCLAIMER =
@@ -52,20 +52,32 @@ const OVERLAY_FILTERS: { key: keyof OverlayToggles; label: string; icon: ReactNo
 interface PreviewToolbarProps {
   cardFormat: CardFormat;
   onFormatChange: (format: CardFormat) => void;
-  platforms: PlatformVisibility;
-  onPlatformsChange: (platforms: PlatformVisibility) => void;
   toggles: OverlayToggles;
   onTogglesChange: (toggles: OverlayToggles) => void;
+  /**
+   * Platform control. "none" (default) renders nothing — the page shows every
+   * platform (Draft, which always shows iOS + Android side by side). "single"
+   * renders an iOS↔Android segmented toggle showing one platform at a time
+   * (Playbook Pass); requires `platforms`/`onPlatformsChange`.
+   */
+  platformMode?: "none" | "single";
+  platforms?: PlatformVisibility;
+  onPlatformsChange?: (platforms: PlatformVisibility) => void;
 }
 
 export default function PreviewToolbar({
   cardFormat,
   onFormatChange,
-  platforms,
-  onPlatformsChange,
   toggles,
   onTogglesChange,
+  platformMode = "none",
+  platforms,
+  onPlatformsChange,
 }: PreviewToolbarProps) {
+  // Single-select: derive the one active platform from the shared visibility
+  // state (default iOS when ambiguous).
+  const activePlatform: Platform = platforms?.android && !platforms.ios ? "android" : "ios";
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-4 py-2.5">
       <div className="flex overflow-hidden rounded-lg border border-line">
@@ -88,23 +100,27 @@ export default function PreviewToolbar({
         ))}
       </div>
 
-      <div className="flex items-center gap-1.5">
-        {(["ios", "android"] as const).map((p) => (
-          <button
-            key={p}
-            type="button"
-            aria-pressed={platforms[p]}
-            onClick={() => onPlatformsChange({ ...platforms, [p]: !platforms[p] })}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-              platforms[p]
-                ? "border-[var(--color-secondary)] bg-panel-strong text-[var(--color-secondary)]"
-                : "border-line bg-panel text-muted hover:border-line-strong"
-            }`}
-          >
-            {p === "ios" ? "iOS preview" : "Android preview"}
-          </button>
-        ))}
-      </div>
+      {platformMode === "single" && onPlatformsChange && (
+        <div className="flex overflow-hidden rounded-lg border border-line">
+          {(["ios", "android"] as const).map((p, i) => (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={activePlatform === p}
+              onClick={() => onPlatformsChange({ ios: p === "ios", android: p === "android" })}
+              className={`px-4 py-1.5 text-xs font-semibold transition ${
+                i > 0 ? "border-l border-line" : ""
+              } ${
+                activePlatform === p
+                  ? "border-[var(--color-secondary)] bg-panel-strong text-[var(--color-secondary)]"
+                  : "text-muted hover:text-body"
+              }`}
+            >
+              {p === "ios" ? "iOS" : "Android"}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center gap-1.5">
         {OVERLAY_FILTERS.map((filter) => (

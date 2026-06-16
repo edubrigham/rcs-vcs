@@ -21,8 +21,7 @@ import StepNav from "@/components/StepNav";
 import { scoreRcsContent } from "@/lib/scoreRcsContent";
 
 export default function Home() {
-  const { content, patchContent, toggles, setToggles, platforms, setPlatforms } =
-    useSimulator();
+  const { content, patchContent, toggles, setToggles } = useSimulator();
 
   const score = useMemo(() => scoreRcsContent(content), [content]);
 
@@ -49,28 +48,19 @@ export default function Home() {
             <PreviewToolbar
               cardFormat={content.cardFormat}
               onFormatChange={(cardFormat) => patchContent({ cardFormat })}
-              platforms={platforms}
-              onPlatformsChange={setPlatforms}
               toggles={toggles}
               onTogglesChange={setToggles}
             />
 
+            {/* Draft always shows BOTH platforms side by side — the tool's
+                signature comparison; no device filter here. */}
             <div className="flex flex-wrap items-start justify-center gap-8 p-6 pb-2">
-              {platforms.ios && (
-                <PlatformPreview platform="ios" caption="iOS">
-                  <RcsCardPreview content={content} platform="ios" toggles={toggles} />
-                </PlatformPreview>
-              )}
-              {platforms.android && (
-                <PlatformPreview platform="android" caption="Android">
-                  <RcsCardPreview content={content} platform="android" toggles={toggles} />
-                </PlatformPreview>
-              )}
-              {!platforms.ios && !platforms.android && (
-                <p className="py-20 text-sm text-muted">
-                  Enable at least one platform preview in the panel on the left.
-                </p>
-              )}
+              <PlatformPreview platform="ios" caption="iOS">
+                <RcsCardPreview content={content} platform="ios" toggles={toggles} />
+              </PlatformPreview>
+              <PlatformPreview platform="android" caption="Android">
+                <RcsCardPreview content={content} platform="android" toggles={toggles} />
+              </PlatformPreview>
             </div>
           </div>
 
