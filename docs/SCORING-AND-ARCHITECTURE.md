@@ -45,38 +45,38 @@ with the rule.
 ## B. "Why is this 58 and not higher?" — answering live
 
 Every score is a subtraction story. To answer "why not higher" you read the
-penalties that fired. Worked example — the **Image safe-zone = 69** we verified
-(compact card, ~0.85 image, long text, subject near the edge):
+penalties that fired. Worked example — the default sample's **Image safe-zone =
+52** (compact card, 0.8 image, long text, subject in the top-right corner):
 
-| Platform | Start | Penalty (file:line) | Reason / slide |
+| Platform | Start | Penalty | Reason / slide |
 |---|---|---|---|
-| iOS | 100 | −15 (`:223`) | focal outside central safe zone |
-| Android | 100 | →65 (`:165`) | focal inside crop but outside safe zone |
-| Android | 65 | −12 (`:190`) | high crop severity (long text shrinks media) — xPlatform s15 |
-| | | **avg(85, 53) = 69** | |
+| iOS | 100 | −15 | focal outside the central safe zone |
+| Android | 100 | →30 | focal **outside** the Android crop window (critical) |
+| Android | 30 | −12 | high crop severity (long text) — xPlatform s15 |
+| | | **avg(85, 18) = 52** | |
 
-So the honest answer in the room is: *"69 because the subject sits outside the
-central safe zone (costs both platforms) and the long text forces a severe
-Android crop. Move the subject in and shorten the copy and it climbs."* Then
-the overall is just the weighted sum — open the score panel, the four bars
-**are** the breakdown.
+So the honest answer in the room is: *"52 because the product sits in the corner
+— outside the Android crop entirely, and outside the central safe zone on iOS.
+Drag it to the centre and shorten the copy and it climbs."* The overall is just
+the weighted sum — open the score panel, the four bars **are** the breakdown.
 
 Key explanation move: **overall is a weighted average of two platforms, not a
-min** (`:418-420`). A card great on iOS but broken on Android lands mid-range,
-not low — a deliberate (and debatable) product choice worth naming.
+min**. A card great on iOS but broken on Android lands mid-range, not low — a
+deliberate (and debatable) product choice worth naming.
 
 ### Where & why the image/crop math lives where it does
 
 - The geometry is in `lib/cropMath.ts` as **pure functions** (`getVisibleWindow`
   derives the real cover-crop window; `criticalSquareWindow` is the iOS 60×60
-  centre square; `subjectProminenceWindow` is the simulated re-crop).
-- It's separated from scoring because the **same math has three consumers**:
-  the score (does the focal point survive the crop?), the live preview (what the
-  phone shows), and the improver (the re-crop suggestion). One source of truth,
-  no drift between "what we score" and "what we draw."
-- Scoring calls it at `scoreRcsContent.ts:147` (Android centre-crop window) and
-  `:199` (iOS critical square), then asks one question: *is the focal point
-  inside?* That's the entire safe-zone check — geometry + a point-in-rect test.
+  centre square; `applyVerticalCrop` is the text-driven punch-in;
+  `subjectProminenceWindow` is the simulated re-crop).
+- `rcsRules.ts` composes these into `androidCropWindow(aspect, format, lines)` —
+  a fixed-container cover crop plus a **monotone vertical punch-in** that grows
+  with text length [xPlatform s15]. Fixed container + punch-in guarantees the
+  surviving area only ever *shrinks* as text grows, for every image aspect.
+- That one function is the **single consumer of truth** for the score (does the
+  focal survive the crop?), the live preview (what the phone draws), and the
+  improver — so "what we score" and "what we draw" cannot drift.
 
 ---
 
@@ -108,13 +108,16 @@ genuine gaps, not scoping decisions:
 - **Carousels.** The brief explicitly asks for a 3-product carousel; the format
   enum is single-card only (`compact|medium|tall`). Carousel media tables
   (CardMedia) and carousel text/CTA rules (s14) are unscored. This is the
-  largest gap.
-- **Image *file* validation.** "Verify the images" implies checking format
-  (JPEG/PNG/GIF), file size (≤100 MB), and resolution against the 1080p
-  baseline. We score *aspect ratio and crop* but never inspect the file itself.
-- **GIF-not-animated-on-iOS** (s11) and **video** media specifics — unhandled.
-- **Hard character caps** (3072 body, 200/2000 overflow page) and **link-preview
-  behaviour** (s9–10, s27) — unhandled (no hyperlink-in-text concept).
+  largest remaining gap.
+- **Image *file* validation.** "Verify the images" implies checking the file
+  itself — format (JPEG/PNG/GIF), file size (≤100 MB), resolution vs the 1080p
+  baseline, GIF-not-animated-on-iOS (s11). We score aspect ratio and crop but
+  the data model carries no file type/size, so the file is never inspected.
+- **Link-preview behaviour** (s9–10, s27) — no hyperlink-in-text concept.
+
+*Closed by the playbook-faithfulness audit (2026-06):* the iOS 200/2000
+overflow-page caps (s23), the cross-platform 3-line check (s11, previously
+iOS-only), and action-before-replies ordering (s21) are now scored.
 
 Naming these explicitly keeps the line clear: the conversation matrix is a
 *different model*; carousels and file validation are *missing coverage of the
@@ -142,24 +145,32 @@ current model's goal* and belong on the roadmap.
 
 ---
 
-## D. What is deliberately PoC-grade (raise these first)
+## D. Production-hardening status
 
-Honesty here is the strongest move — these are the questions a CTO asks, and
-each has a clear, cheap fix because the core is already clean.
+Done (playbook-faithfulness audit, 2026-06):
 
-| Gap | Why it matters for prod | Fix (and why it's cheap) |
+- ✅ **Tests** — 86 unit tests (`lib/*.test.ts`, `npm run test:run`): pure-function
+  golden values, a 15-case crop-monotonicity matrix, suggestion/text/image
+  boundaries, the improver, and a citation-coverage guard.
+- ✅ **Function split** — `scoreRcsContent` is now four pure, independently
+  tested sub-scorers (`scoreText/Image/Actions/Layout`), proven
+  behaviour-identical to the pre-split version via captured goldens.
+- ✅ **Magic numbers named** — `RATIO_DEVIATION_TOLERANCE`, the compact thumbnail
+  bounds, and the iOS overflow caps are now named, cited constants.
+
+Still PoC-grade (each is "add a layer," not "rebuild"):
+
+| Gap | Why it matters for prod | Fix |
 |---|---|---|
-| **No tests** | This would be the scoring basis — it must be provably correct | The function is pure → golden-file unit tests are trivial. Highest-value next step; would let us *prove* every score. |
-| **One 459-line function** | Can't test image scoring in isolation | Split into `scoreText/Image/Actions/Layout`, each pure & tested. Mechanical refactor, no behaviour change. |
-| **Penalty weights inline** (−15, −12, 0.25 tolerance, base scores) | Tuning the model means editing logic; not reviewable by a non-dev | Extract a named `ScoringPolicy` config object. Separates *playbook facts* (already external) from *our scoring judgment* (currently buried). |
-| **No input validation** | As an API it takes untrusted payloads | Add a schema (zod) at the API boundary; the in-browser path doesn't need it. |
-| **No score versioning** | API consumers need reproducible/comparable results over time | Stamp results with `scoringVersion`; bump on rule changes. |
-| **Char-per-line text estimate** | Real wrap depends on font metrics; ours is an approximation | Documented as approximate; acceptable for scoring, can be upgraded to real measurement if needed. |
-| **Cross-platform = average** | Hides a one-platform failure behind a mid score | Product decision — confirm average vs. worst-case is intended. |
+| **Penalty weights still inline** (−15, −12, base scores) | Tuning the model edits logic, not config | Extract a named `ScoringPolicy` object — separate playbook facts from scoring judgment. |
+| **No input validation** | As an API it takes untrusted payloads | Add a schema (zod) at the API boundary. |
+| **No score versioning** | API consumers need reproducible/comparable results | Stamp results with `scoringVersion`. |
+| **Char-per-line text estimate** | Real wrap depends on font metrics | Documented approximation; upgradeable to real measurement. |
+| **Cross-platform = average** | Hides a one-platform failure behind a mid score | Product decision — confirm average vs. worst-case. |
 
-None of these are rework — they're hardening on top of a sound core. The line
-to hold in the meeting: **the rules are faithful to the playbook, the engine is
-pure and explainable, and the gaps are all "add a layer," not "rebuild."**
+The line to hold: **the rules are now provably faithful to the playbook (tested),
+the engine is pure and explainable, and what remains is "add a layer," not
+"rebuild."**
 
 ---
 

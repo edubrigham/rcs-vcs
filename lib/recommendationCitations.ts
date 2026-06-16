@@ -55,7 +55,8 @@ function buildDisplayTitle(label: string): string {
 
   const cardMediaMatch = label.match(/^Card Media\s+p(\d+)$/i);
   if (cardMediaMatch) {
-    return `Card Media Playbook - slide ${cardMediaMatch[1]}`;
+    // The Card Media Playbook is page-based ("p" = PDF page), not slide-numbered.
+    return `Card Media Playbook - page ${cardMediaMatch[1]}`;
   }
 
   return label;

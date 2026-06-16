@@ -16,14 +16,15 @@
 import {
   clamp,
   criticalSquareWindow,
-  getVisibleWindow,
   pointInWindow,
   visibleAreaFraction,
 } from "@/lib/cropMath";
 import {
+  androidCropWindow,
   estimateTextLines,
   getPlatformRules,
   IOS_RULES,
+  RATIO_DEVIATION_TOLERANCE,
   recommendedAspectForFormat,
   SAFE_ZONE_RULES,
   SUGGESTION_RULES,
@@ -106,7 +107,12 @@ export function scoreText(content: RcsContent): SubScore {
         "Keep title + description within 6 total lines so users never lose the CTA (xPlatform Playbook s23).",
     });
     iosText = clamp(iosText - 20, 10, 100);
-  } else if (iosLines.totalLines > IOS_RULES.maxRecommendedTextLines) {
+  } else if (
+    iosLines.totalLines > IOS_RULES.maxRecommendedTextLines ||
+    androidLines.totalLines > IOS_RULES.maxRecommendedTextLines
+  ) {
+    // s11 applies to BOTH platforms; Android wraps at narrower chars-per-line,
+    // so check both estimates, not just iOS.
     warnings.push({
       severity: "info",
       platform: "both",
@@ -130,6 +136,27 @@ export function scoreText(content: RcsContent): SubScore {
       message:
         "Very long text pushes the Android card toward its 576px cap, where the rest hides behind a “More” page.",
       recommendation: "Trim the description below ~5 rendered lines (xPlatform Playbook s25).",
+    });
+  }
+
+  // [xPlatform s23] Hard content caps of the overflow full-text page: beyond
+  // these, even the separate page truncates.
+  if (content.title.length > IOS_RULES.titleFullTextCapChars) {
+    warnings.push({
+      severity: "warning",
+      platform: "ios",
+      category: "text",
+      message: `Title exceeds the ${IOS_RULES.titleFullTextCapChars}-character cap of the iOS overflow full-text page; the rest is dropped.`,
+      recommendation: `Keep the title under ${IOS_RULES.titleFullTextCapChars} characters (xPlatform Playbook s23).`,
+    });
+  }
+  if (content.description.length > IOS_RULES.descriptionFullTextCapChars) {
+    warnings.push({
+      severity: "warning",
+      platform: "ios",
+      category: "text",
+      message: `Description exceeds the ${IOS_RULES.descriptionFullTextCapChars}-character cap of the iOS overflow full-text page; the rest is dropped.`,
+      recommendation: `Keep the description under ${IOS_RULES.descriptionFullTextCapChars} characters (xPlatform Playbook s23).`,
     });
   }
 
@@ -167,8 +194,9 @@ export function scoreImage(content: RcsContent): SubScore {
   const aspect = content.imageMetadata.aspectRatio;
   const focal = content.focalPoint;
 
-  // Android: center crop into the format's media container [xPlatform s28].
-  const androidWindow = getVisibleWindow(aspect, androidRules.mediaWidth / androidRules.mediaHeight);
+  // Android: fixed-container cover crop + a monotone vertical punch-in that
+  // grows with text length [xPlatform s15, s28]. Shared with the preview.
+  const androidWindow = androidCropWindow(aspect, content.cardFormat, androidLines.totalLines);
   const focalInsideAndroidCrop = pointInWindow(focal, androidWindow);
   const focalInsideSafeZone =
     focal.x >= SAFE_LO && focal.x <= SAFE_HI && focal.y >= SAFE_LO && focal.y <= SAFE_HI;
@@ -230,7 +258,10 @@ export function scoreImage(content: RcsContent): SubScore {
           "Place critical content in the centered square of the image (xPlatform Playbook s16).",
       });
     }
-    if (aspect > 1.4 || aspect < 0.4) {
+    if (
+      aspect > IOS_RULES.compactThumbnailAspectAbove ||
+      aspect < IOS_RULES.compactThumbnailAspectBelow
+    ) {
       imageScoreIos = clamp(imageScoreIos - 10, 0, 100);
       warnings.push({
         severity: "warning",
@@ -277,7 +308,7 @@ export function scoreImage(content: RcsContent): SubScore {
 
   // Recommended source ratio per format.
   const rec = recommendedAspectForFormat(content.cardFormat);
-  if (Math.abs(aspect - rec.aspect) / rec.aspect > 0.25) {
+  if (Math.abs(aspect - rec.aspect) / rec.aspect > RATIO_DEVIATION_TOLERANCE) {
     warnings.push({
       severity: "info",
       platform: "both",
@@ -399,8 +430,29 @@ export function scoreActions(content: RcsContent): SubScore {
         "Mark one action as primary and place it first — iOS always shows actions above replies (xPlatform Playbook s21).",
     });
   }
+  // [xPlatform s21] An action placed AFTER a reply gets reordered above it on
+  // iOS, so the authored order is misleading. A small penalty makes the
+  // improver's reorder visible in the before/after delta.
+  const firstReplyIndex = content.actions.findIndex((a) => a.type === "reply");
+  const actionAfterReply =
+    firstReplyIndex >= 0 &&
+    content.actions.some((a, i) => a.type !== "reply" && i > firstReplyIndex);
+  if (actionAfterReply) {
+    iosActionScore = clamp(iosActionScore - 5, 0, 100);
+    warnings.push({
+      severity: "info",
+      platform: "ios",
+      category: "actions",
+      message: "A suggested action is placed after a reply; iOS always shows actions above replies, changing the order.",
+      recommendation: "Place the suggested action before the replies (xPlatform Playbook s21).",
+    });
+  }
   const insecureUrl = content.actions.find(
-    (a) => a.type === "openUrl" && a.value.trim() !== "" && !a.value.trim().startsWith("https://"),
+    (a) =>
+      a.type === "openUrl" &&
+      a.value.trim() !== "" &&
+      // URI schemes are case-insensitive (RFC 3986) — lowercase before checking.
+      !a.value.trim().toLowerCase().startsWith("https://"),
   );
   if (insecureUrl) {
     warnings.push({
@@ -433,8 +485,12 @@ export function scoreLayout(content: RcsContent): LayoutScore {
   const androidRules = getPlatformRules("android", content.cardFormat, androidLines.totalLines);
 
   let layoutScore = 100;
+  // s11 is cross-platform: penalise when EITHER platform exceeds 3 lines.
+  const overRecommended =
+    iosLines.totalLines > IOS_RULES.maxRecommendedTextLines ||
+    androidLines.totalLines > IOS_RULES.maxRecommendedTextLines;
   if (iosLines.totalLines > IOS_RULES.tappableOverflowTotalLines) layoutScore -= 20;
-  else if (iosLines.totalLines > IOS_RULES.maxRecommendedTextLines) layoutScore -= 10;
+  else if (overRecommended) layoutScore -= 10;
   if (!content.imageUrl) layoutScore -= 15;
   if (androidRules.cropSeverity === "high") layoutScore -= 10;
   if (content.cardFormat === "medium") {

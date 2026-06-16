@@ -61,9 +61,10 @@ export const SUBJECT_PROMINENCE = 0.75;
 
 /**
  * A tighter, focal-centered crop window used by improved previews to simulate
- * a re-cropped asset: same aspect ratio as the container, zoomed to
- * SUBJECT_PROMINENCE of the maximal cover window, centered on the focal point
- * (clamped so the window stays inside the image).
+ * a re-cropped asset: same aspect ratio as the container, each side scaled to
+ * SUBJECT_PROMINENCE of the maximal cover window (so the kept AREA is
+ * SUBJECT_PROMINENCE², i.e. ~56%), centered on the focal point and clamped so
+ * the window stays inside the image.
  */
 export function subjectProminenceWindow(
   imageAspect: number,
@@ -78,9 +79,26 @@ export function subjectProminenceWindow(
   return { x0, y0, x1: x0 + fw, y1: y0 + fh };
 }
 
+/**
+ * Applies an additional centered VERTICAL crop to a window, keeping `keep`
+ * (0..1) of its height. This is how the Android simulation models
+ * "vertical cropping becomes more severe with longer texts" [xPlatform s15]:
+ * the media container aspect stays fixed, and longer text punches a larger
+ * vertical slice out of the centre — guaranteeing the surviving area shrinks
+ * monotonically as text grows (a fixed container aspect that crossed the image
+ * aspect could otherwise make the cropped axis flip and reduce crop).
+ */
+export function applyVerticalCrop(win: VisibleWindow, keep: number): VisibleWindow {
+  const k = clamp(keep, 0, 1);
+  const height = win.y1 - win.y0;
+  const cut = (height * (1 - k)) / 2;
+  return { x0: win.x0, y0: win.y0 + cut, x1: win.x1, y1: win.y1 - cut };
+}
+
 /** Fraction (0..1) of the source image area that survives the crop. */
 export function visibleAreaFraction(win: VisibleWindow): number {
-  return (win.x1 - win.x0) * (win.y1 - win.y0);
+  // max(0, …): an inverted window (shouldn't occur) reports 0% visible, never negative.
+  return Math.max(0, (win.x1 - win.x0) * (win.y1 - win.y0));
 }
 
 /**

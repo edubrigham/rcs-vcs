@@ -18,6 +18,7 @@
  * playbooks (see /skills/rcs-playbook-rules for the extracted reference docs).
  */
 
+import { applyVerticalCrop, getVisibleWindow, type VisibleWindow } from "@/lib/cropMath";
 import type { CardFormat, Platform, PlatformRenderRules } from "@/types/rcs";
 
 export const IOS_RULES = {
@@ -51,7 +52,26 @@ export const IOS_RULES = {
     medium: 132,
     tall: 204,
   },
+  /**
+   * [xPlatform s23] iOS overflow full-text-page content caps: beyond these the
+   * text is hard-truncated even on the separate page.
+   */
+  titleFullTextCapChars: 200,
+  descriptionFullTextCapChars: 2000,
+  /**
+   * Compact 60×60 thumbnail suitability bounds — a simulator heuristic (NOT a
+   * playbook number): an asset far from square reads poorly as a tiny square.
+   * Kept distinct from the vertical-card extremeAspect bounds above.
+   */
+  compactThumbnailAspectAbove: 1.4,
+  compactThumbnailAspectBelow: 0.4,
 } as const;
+
+/**
+ * How far the uploaded source ratio may stray from a format's recommended ratio
+ * before we warn. Simulator tolerance — the playbook gives no numeric value.
+ */
+export const RATIO_DEVIATION_TOLERANCE = 0.25;
 
 export const ANDROID_RULES = {
   /** [xPlatform s15] "On Android, vertical cropping becomes more severe with longer texts." */
@@ -152,16 +172,21 @@ export function cropSeverityForLines(totalLines: number): "low" | "medium" | "hi
   return "high";
 }
 
-/** How much of the media container height survives at each severity. */
-const ANDROID_MEDIA_HEIGHT_FACTOR: Record<
-  "horizontal" | "vertical",
-  Record<"low" | "medium" | "high", number>
-> = {
-  // [xPlatform s15] the horizontal card is where text length bites hardest.
-  horizontal: { low: 1, medium: 0.7, high: 0.48 },
-  // Vertical cards have fixed container ratios [CardMedia p8]; long text still
-  // competes for the 576px card budget [xPlatform s25], so we apply a mild cut.
-  vertical: { low: 1, medium: 0.88, high: 0.76 },
+/**
+ * Fraction of the cover window's HEIGHT that survives at each text severity,
+ * modelling [xPlatform s15] "Android vertical cropping becomes more severe with
+ * longer texts". The media container aspect is FIXED per format; longer text
+ * punches a larger centred vertical slice out of the image. Because this only
+ * ever shrinks the window, the surviving area is guaranteed MONOTONICALLY
+ * non-increasing as text grows — for every image aspect — which a
+ * text-driven container-aspect change could not guarantee (the cropped axis
+ * could flip and reduce crop). The magnitudes are a documented approximation;
+ * only the direction is from the playbook.
+ */
+const ANDROID_VERTICAL_CROP_KEEP: Record<"low" | "medium" | "high", number> = {
+  low: 1,
+  medium: 0.82,
+  high: 0.62,
 };
 
 /**
@@ -217,13 +242,14 @@ export function getPlatformRules(
   }
 
   // ─── Android ───
+  // Media box size is FIXED per format (independent of text); "more crop with
+  // longer text" is modelled by androidCropWindow's vertical punch-in, not by
+  // shrinking the box (which made the crop axis flip — see ANDROID_VERTICAL_CROP_KEEP).
   if (cardFormat === "compact") {
-    // [CardMedia p13] fixed 128dp media width, content-driven height;
-    // [xPlatform s15] vertical cropping worsens as text grows.
-    const baseHeight = 204;
+    // [CardMedia p13] fixed 128dp media width.
     return {
       mediaWidth: ANDROID_RULES.horizontalCardMediaWidthDp,
-      mediaHeight: Math.round(baseHeight * ANDROID_MEDIA_HEIGHT_FACTOR.horizontal[severity]),
+      mediaHeight: 204,
       maxTitleLines: 2,
       maxDescriptionLines: 4,
       maxVisibleActions: SUGGESTION_RULES.maxSuggestionsPerCard,
@@ -239,10 +265,9 @@ export function getPlatformRules(
     cardFormat === "medium"
       ? ANDROID_RULES.verticalContainerAspect.medium // 21:9 [CardMedia p8]
       : ANDROID_RULES.verticalContainerAspect.tall; // 3:2  [CardMedia p8]
-  const baseHeight = Math.round(CARD_WIDTH.android / containerAspect);
   return {
     mediaWidth: CARD_WIDTH.android,
-    mediaHeight: Math.round(baseHeight * ANDROID_MEDIA_HEIGHT_FACTOR.vertical[severity]),
+    mediaHeight: Math.round(CARD_WIDTH.android / containerAspect),
     maxTitleLines: 2,
     maxDescriptionLines: 5, // beyond this Android heads toward the 576px "More" page [xPlatform s25]
     maxVisibleActions: SUGGESTION_RULES.maxSuggestionsPerCard,
@@ -252,6 +277,23 @@ export function getPlatformRules(
     titleCharsPerLine: 30,
     descriptionCharsPerLine: 38,
   };
+}
+
+/**
+ * The part of the source image visible inside the Android media container for a
+ * given format and text length: the fixed-container cover crop, then a centred
+ * vertical punch-in that grows with text severity [xPlatform s15]. Guaranteed
+ * monotonic: more text → never more visible area. Shared by the scorer and the
+ * preview so "what we score" and "what we draw" cannot diverge.
+ */
+export function androidCropWindow(
+  imageAspect: number,
+  cardFormat: CardFormat,
+  totalTextLines: number,
+): VisibleWindow {
+  const rules = getPlatformRules("android", cardFormat, totalTextLines);
+  const base = getVisibleWindow(imageAspect, rules.mediaWidth / rules.mediaHeight);
+  return applyVerticalCrop(base, ANDROID_VERTICAL_CROP_KEEP[rules.cropSeverity]);
 }
 
 /** Recommended source-asset aspect ratio per format [xPlatform s12/s16, CardMedia p8]. */

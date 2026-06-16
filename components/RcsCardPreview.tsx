@@ -21,7 +21,7 @@ import {
   visibleAreaFraction,
   type VisibleWindow,
 } from "@/lib/cropMath";
-import { estimateTextLines, getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
+import { androidCropWindow, estimateTextLines, getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
 import type {
   FocalPoint,
   OverlayToggles,
@@ -88,15 +88,21 @@ export default function RcsCardPreview({
       : rules.mediaHeight;
 
   const containerAspect = mediaWidth / mediaHeight;
-  // Original previews show what platforms actually do (center cover-crop);
-  // improved previews simulate a re-cropped asset: a tighter window centered
-  // on the subject so it fills the frame.
+  // Original iOS shows the platform's plain center cover-crop. Android original
+  // uses the shared monotone crop window (cover + text-driven vertical punch-in,
+  // same as the scorer). Improved simulates a re-cropped asset centred on the
+  // subject. Non-cover windows are rendered by mapping the window rect onto the
+  // box explicitly (object-fit can pan but not zoom past cover).
   const focalForCrop = variant === "improved" ? (subjectPoint ?? content.focalPoint) : content.focalPoint;
+  const isAndroid = platform === "android";
   const window: VisibleWindow | null = aspect
     ? variant === "improved"
       ? subjectProminenceWindow(aspect, containerAspect, focalForCrop)
-      : getVisibleWindow(aspect, containerAspect)
+      : isAndroid
+        ? androidCropWindow(aspect, content.cardFormat, lines.totalLines)
+        : getVisibleWindow(aspect, containerAspect)
     : null;
+  const useExplicitWindow = !!window && (variant === "improved" || isAndroid);
 
   const media = (
     <div
@@ -104,15 +110,14 @@ export default function RcsCardPreview({
       style={{ width: mediaWidth, height: mediaHeight }}
     >
       {content.imageUrl ? (
-        variant === "improved" && window ? (
-          // object-fit can pan but never zoom past "cover", so the tighter
-          // window is rendered by sizing/offsetting the img explicitly.
+        useExplicitWindow && window ? (
           <img
             src={content.imageUrl}
             alt=""
             className="absolute"
             style={{
               width: `${100 / (window.x1 - window.x0)}%`,
+              height: `${100 / (window.y1 - window.y0)}%`,
               maxWidth: "none",
               left: `${(-window.x0 / (window.x1 - window.x0)) * 100}%`,
               top: `${(-window.y0 / (window.y1 - window.y0)) * 100}%`,

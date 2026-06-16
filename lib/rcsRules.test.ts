@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { visibleAreaFraction } from "@/lib/cropMath";
 import {
+  androidCropWindow,
   ANDROID_RULES,
   cropSeverityForLines,
   estimateLines,
@@ -70,10 +72,31 @@ describe("getPlatformRules — key playbook facts", () => {
     expect(r.mediaLayout).toBe("horizontal");
   });
 
-  it("shrinks Android compact media height as text grows (xPlatform s15)", () => {
-    const low = getPlatformRules("android", "compact", 2); // low severity
-    const high = getPlatformRules("android", "compact", 8); // high severity
-    expect(high.mediaHeight).toBeLessThan(low.mediaHeight);
+  it("keeps a FIXED media-box size per format regardless of text (crop is the punch-in, not the box)", () => {
+    const low = getPlatformRules("android", "compact", 2);
+    const high = getPlatformRules("android", "compact", 8);
+    expect(high.mediaHeight).toBe(low.mediaHeight);
     expect(high.cropSeverity).toBe("high");
   });
+});
+
+describe("androidCropWindow — monotone crop with text (xPlatform s15, BUG-1 guard)", () => {
+  // The crux of the fix: for EVERY format × aspect, more text must never show
+  // MORE of the image. The old shrink-the-box model violated this for landscape
+  // and near-square images (the cropped axis flipped). lines 2/5/8 → low/med/high.
+  const FORMATS = ["compact", "medium", "tall"] as const;
+  const ASPECTS = [1.5, 21 / 9, 9 / 16, 1.0, 0.85];
+  for (const fmt of FORMATS) {
+    for (const aspect of ASPECTS) {
+      it(`${fmt} @ aspect ${aspect.toFixed(3)}: visible area is non-increasing as text grows`, () => {
+        const area = (lines: number) =>
+          visibleAreaFraction(androidCropWindow(aspect, fmt, lines));
+        const lo = area(2);
+        const mid = area(5);
+        const hi = area(8);
+        expect(mid).toBeLessThanOrEqual(lo + 1e-9);
+        expect(hi).toBeLessThanOrEqual(mid + 1e-9);
+      });
+    }
+  }
 });

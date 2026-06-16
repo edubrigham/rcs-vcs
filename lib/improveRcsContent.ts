@@ -12,28 +12,20 @@
  * TODO: add JSON import/export for actual Naxai RCS payloads.
  */
 
-import { clamp, getVisibleWindow, pointInWindow } from "@/lib/cropMath";
+import { clamp, pointInWindow } from "@/lib/cropMath";
 import {
+  androidCropWindow,
+  estimateLines,
   estimateTextLines,
   getPlatformRules,
   SAFE_ZONE_RULES,
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";
-import type { ImprovedRcsContent, RcsAction, RcsContent, ScoreResult } from "@/types/rcs";
+import type { CardFormat, ImprovedRcsContent, RcsAction, RcsContent, ScoreResult } from "@/types/rcs";
 
-/** ~1 short line of title on both platforms. */
-const TITLE_TARGET_CHARS = 30;
-/**
- * ~2 rendered lines of description — inside the 3-line budget [xPlatform s11].
- * The compact (horizontal) card has a much narrower text column (128dp media
- * beside it), so it gets a tighter budget; the playbook itself pairs that
- * format with a "short text block" [CardMedia p13].
- */
-const DESCRIPTION_TARGET_CHARS: Record<RcsContent["cardFormat"], number> = {
-  compact: 56,
-  medium: 76,
-  tall: 76,
-};
+/** Target rendered lines per field so title + description stay within ~3 [xPlatform s11]. */
+const TITLE_TARGET_LINES = 1;
+const DESCRIPTION_TARGET_LINES = 2;
 
 const SAFE_LO = (1 - SAFE_ZONE_RULES.centralFraction) / 2;
 const SAFE_HI = 1 - SAFE_LO;
@@ -81,24 +73,62 @@ function shorten(text: string, target: number): string {
   return head;
 }
 
+/** Narrowest chars-per-line across both platforms for a field on a format. */
+function worstCharsPerLine(cardFormat: CardFormat, role: "title" | "description"): number {
+  const ios = getPlatformRules("ios", cardFormat, 0);
+  const android = getPlatformRules("android", cardFormat, 0);
+  return role === "title"
+    ? Math.min(ios.titleCharsPerLine, android.titleCharsPerLine)
+    : Math.min(ios.descriptionCharsPerLine, android.descriptionCharsPerLine);
+}
+
+/**
+ * Shortens text until it actually renders within `maxLines` on the NARROWEST
+ * platform (not merely under a character count) — so the improver's "fits the
+ * recommended lines" claim is true on both iOS and Android.
+ */
+function shortenToLines(
+  text: string,
+  cardFormat: CardFormat,
+  role: "title" | "description",
+  maxLines: number,
+): string {
+  const cpl = worstCharsPerLine(cardFormat, role);
+  let result = shorten(text, cpl * maxLines);
+  for (let guard = 0; guard < 50 && result.includes(" ") && estimateLines(result, cpl) > maxLines; guard++) {
+    result = result.slice(0, result.lastIndexOf(" ")).replace(/[,;:\-–—]$/, "").trim();
+  }
+  return result;
+}
+
+/** Whether the text already fits within `maxLines` on both platforms. */
+function fitsLines(
+  text: string,
+  cardFormat: CardFormat,
+  role: "title" | "description",
+  maxLines: number,
+): boolean {
+  return estimateLines(text, worstCharsPerLine(cardFormat, role)) <= maxLines;
+}
+
 export function improveRcsContent(
   input: RcsContent,
   scoreResult: ScoreResult,
 ): ImprovedRcsContent {
   const changes: string[] = [];
 
-  // 1. Text: bring title + description back inside the 3-line budget.
+  // 1. Text: shorten until title + description actually render within ~3 lines
+  //    on BOTH platforms (line-aware, not character-count — [xPlatform s11]).
   let title = input.title.trim().replace(/\s+/g, " ");
-  if (title.length > TITLE_TARGET_CHARS) {
-    title = shorten(title, TITLE_TARGET_CHARS);
-    changes.push("Shortened the title to reduce wrapping and iOS truncation (xPlatform s13).");
+  if (!fitsLines(title, input.cardFormat, "title", TITLE_TARGET_LINES)) {
+    title = shortenToLines(title, input.cardFormat, "title", TITLE_TARGET_LINES);
+    changes.push("Shortened the title to a single line to avoid wrapping and iOS truncation (xPlatform s11, s13).");
   }
-  const descriptionTarget = DESCRIPTION_TARGET_CHARS[input.cardFormat];
   let description = input.description.trim().replace(/\s+/g, " ");
-  if (description.length > descriptionTarget) {
-    description = shorten(description, descriptionTarget);
+  if (!fitsLines(description, input.cardFormat, "description", DESCRIPTION_TARGET_LINES)) {
+    description = shortenToLines(description, input.cardFormat, "description", DESCRIPTION_TARGET_LINES);
     changes.push(
-      "Shortened the description to fit the recommended 3 lines and reduce Android media cropping (xPlatform s11, s15).",
+      "Shortened the description so title + description fit the recommended 3 lines on both platforms and reduce Android cropping (xPlatform s11, s15).",
     );
   }
 
@@ -146,7 +176,8 @@ export function improveRcsContent(
     return a;
   });
 
-  // 3. Focal point: pull critical content back into the safe zone.
+  // 3. Focal point: pull critical content back into the safe zone — but only
+  //    emit the re-crop change when something was actually re-cropped.
   let focalPoint = { ...input.focalPoint };
   if (input.imageUrl && input.imageMetadata) {
     const lines = estimateTextLines(
@@ -154,10 +185,10 @@ export function improveRcsContent(
       description,
       getPlatformRules("android", input.cardFormat, 0),
     );
-    const rules = getPlatformRules("android", input.cardFormat, lines.totalLines);
-    const window = getVisibleWindow(
+    const window = androidCropWindow(
       input.imageMetadata.aspectRatio,
-      rules.mediaWidth / rules.mediaHeight,
+      input.cardFormat,
+      lines.totalLines,
     );
     const insideCrop = pointInWindow(focalPoint, window);
     const insideSafeZone =
@@ -169,23 +200,28 @@ export function improveRcsContent(
     // The relocated focal models the RE-EXPORTED asset (subject centered) for
     // scoring; the improved preview zooms to the subject's original position
     // via its subjectPoint prop.
+    let recropped = false;
     if (!insideCrop) {
       focalPoint = { x: 0.5, y: 0.5 };
+      recropped = true;
       changes.push(
-        "The subject was outside the Android visible crop area — the simulated re-crop re-centers it. Export the asset with the subject near the center (Card Media p39).",
+        "The subject was outside the Android visible crop area — the simulated re-crop re-centers it. Export the asset with the subject near the center (Card Media p12).",
       );
     } else if (!insideSafeZone) {
       focalPoint = {
         x: clamp(focalPoint.x, SAFE_LO + 0.1, SAFE_HI - 0.1),
         y: clamp(focalPoint.y, SAFE_LO + 0.1, SAFE_HI - 0.1),
       };
+      recropped = true;
       changes.push(
         "The subject sat outside the central safe zone — the simulated re-crop pulls it back inside (Card Media p39).",
       );
     }
-    changes.push(
-      "Simulated a tighter, subject-centered re-crop so the subject fills the frame instead of floating in dead space — export the real asset with this crop (Card Media p6, p39).",
-    );
+    if (recropped) {
+      changes.push(
+        "Simulated a tighter, subject-centered re-crop so the subject fills the frame instead of floating in dead space — export the real asset with this crop (Card Media p39).",
+      );
+    }
   }
 
   // 4. Format: medium vertical cards diverge most across platforms.

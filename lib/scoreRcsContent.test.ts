@@ -108,9 +108,12 @@ describe("scoreImage", () => {
     expect(r.android).toBe(100);
   });
 
-  it("reproduces the documented compact case: iOS 85 / Android 53 (→ safe-zone 69)", () => {
-    // compact, ~0.85 image, long text (high crop severity), subject off to the
-    // edge but still inside the Android crop and the iOS 1:1 square.
+  it("compact, edge focal, long text: iOS 85 / Android 18 (monotone crop model)", () => {
+    // compact, ~0.85 image, long text (high crop severity), subject near the
+    // LEFT edge. With the fixed-container monotone crop the focal is outside the
+    // Android crop window (→30, −12 high crop = 18); iOS keeps the 1:1 square but
+    // loses the safe-zone (−15 = 85). This input scored 53 on Android under the
+    // old non-monotone model that wrongly widened the window at high severity.
     const r = scoreImage({
       ...DEFAULT_CONTENT,
       cardFormat: "compact",
@@ -118,8 +121,7 @@ describe("scoreImage", () => {
       focalPoint: { x: 0.1, y: 0.5 },
     });
     expect(r.ios).toBe(85);
-    expect(r.android).toBe(53);
-    expect(Math.round((r.ios + r.android) / 2)).toBe(69);
+    expect(r.android).toBe(18);
   });
 });
 
@@ -173,6 +175,6 @@ describe("improveRcsContent raises the score (before/after promise)", () => {
     const improved = improveRcsContent(DEFAULT_CONTENT, before).improvedContent;
     const after = scoreRcsContent(improved);
     expect(after.overallScore).toBeGreaterThan(before.overallScore);
-    expect(after.overallScore).toBe(99); // golden
+    expect(after.overallScore).toBe(100); // golden
   });
 });
