@@ -61,7 +61,10 @@ export default function ImprovePage() {
 
       {/* Same column geometry as Draft: ~360px sidebar LEFT, device panel RIGHT,
           so the device area sits in the exact same spot on both pages. */}
-      <div className="grid gap-8 lg:grid-cols-[minmax(330px,390px)_1fr]">
+      {/* items-start: don't let the tall sidebar stretch the device panel — it
+          must keep its natural height so the viewport matches Draft exactly and
+          the Save button sits at the real device bottom. */}
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(330px,390px)_1fr]">
         <aside className="flex flex-col gap-4">
           <ImprovementScorePanel before={score} after={improvedScore} />
           <ChangesPanel changes={improved.changes} />
@@ -77,9 +80,10 @@ export default function ImprovePage() {
             toggles={toggles}
             onTogglesChange={setToggles}
           />
-          {/* Device area uses the SAME container as Draft (p-6 pb-2, centered)
-              so the frames sit in the exact same spot across pages. */}
-          <div className="p-6 pb-2">
+          {/* Device area is identical to Draft (p-6 pb-2, centered). Labels are
+              corner badges and Save is absolutely positioned, so neither adds
+              height — the viewport is the exact same size as the Draft page. */}
+          <div className="relative p-6 pb-2">
             <BeforeAfterComparison
               original={content}
               originalScore={score}
@@ -88,13 +92,11 @@ export default function ImprovePage() {
               toggles={toggles}
               platforms={singlePlatform}
             />
-          </div>
-          {/* Save changes — bottom-right of the viewport */}
-          <div className="flex justify-end px-6 pb-6 pt-2">
+            {/* Save changes — bottom-right, aligned with the device bottom */}
             <button
               type="button"
               onClick={saveChanges}
-              className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(14,165,233,0.7)] transition hover:opacity-90 active:scale-[0.98]"
+              className="absolute bottom-2 right-6 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(14,165,233,0.7)] transition hover:opacity-90 active:scale-[0.98]"
             >
               Save changes
             </button>

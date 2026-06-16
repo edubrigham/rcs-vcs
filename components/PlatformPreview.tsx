@@ -17,11 +17,12 @@ interface PlatformPreviewProps {
   /** Score chip rendered next to the caption. */
   scoreChip?: ReactNode;
   /**
-   * Content rendered BELOW the device frame (label, score chip, …). Kept below
-   * so it never shifts the frame's position — letting Draft and Playbook Pass
-   * align the device frames pixel-for-pixel.
+   * Badge overlaid on the bezel's top edge (aligned with the platform pill),
+   * e.g. "Original"/"Improved" + score. Absolutely positioned, so it never
+   * changes the frame's size — keeping the viewport identical to the Draft page.
    */
-  footer?: ReactNode;
+  corner?: ReactNode;
+  cornerSide?: "left" | "right";
 }
 
 export default function PlatformPreview({
@@ -29,7 +30,8 @@ export default function PlatformPreview({
   children,
   caption,
   scoreChip,
-  footer,
+  corner,
+  cornerSide = "left",
 }: PlatformPreviewProps) {
   const isIos = platform === "ios";
   const [platformLabel, detailLabel] = (caption ?? "").split("·").map((part) => part.trim());
@@ -53,6 +55,17 @@ export default function PlatformPreview({
           <span className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/70 bg-white px-7 py-1 text-base font-medium text-zinc-900 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.45)]">
             {overlayLabel}
           </span>
+          {corner ? (
+            // Positioned OUTSIDE the frame (in the side margin) so it never
+            // overlaps the centred platform pill and never changes the frame size.
+            <span
+              className={`absolute top-3 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-0.5 font-mono text-[11px] text-zinc-900 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.45)] ${
+                cornerSide === "right" ? "left-full ml-2" : "right-full mr-2"
+              }`}
+            >
+              {corner}
+            </span>
+          ) : null}
         {/* The SCREEN is the fixed-height box, so platform-specific header
             heights don't change the device size. */}
           <div
@@ -107,7 +120,6 @@ export default function PlatformPreview({
         </div>
       </div>
 
-      {footer ? <div className="flex items-center gap-2">{footer}</div> : null}
     </div>
   );
 }

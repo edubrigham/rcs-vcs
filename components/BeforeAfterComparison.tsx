@@ -28,19 +28,17 @@ interface BeforeAfterComparisonProps {
   platforms: PlatformVisibility;
 }
 
-/** Below-device label: "Original"/"Improved" + score chip (+ delta). */
-function Footer({ label, value, delta }: { label: string; value: number; delta?: number }) {
+/** Corner-badge content: "Original"/"Improved" + score (+ delta). */
+function CornerBadge({ label, value, delta }: { label: string; value: number; delta?: number }) {
   return (
     <>
-      <span className="font-mono text-[12px] font-semibold tracking-[0.15em] text-muted">{label}</span>
-      <span className="flex items-center gap-1.5 rounded-full border border-line bg-field px-2 py-0.5 font-mono text-[11px]">
-        <span className={`font-semibold ${scoreTone(value)}`}>{value}</span>
-        {delta !== undefined && delta !== 0 && (
-          <span className={delta > 0 ? "text-[var(--color-secondary)]" : "text-[var(--color-destructive)]"}>
-            {delta > 0 ? `▲ +${delta}` : `▼ ${delta}`}
-          </span>
-        )}
-      </span>
+      <span className="font-semibold uppercase tracking-[0.1em] text-muted">{label}</span>
+      <span className={`font-bold ${scoreTone(value)}`}>{value}</span>
+      {delta !== undefined && delta !== 0 && (
+        <span className={delta > 0 ? "text-[var(--color-secondary)]" : "text-[var(--color-destructive)]"}>
+          {delta > 0 ? `▲+${delta}` : `▼${delta}`}
+        </span>
+      )}
     </>
   );
 }
@@ -75,7 +73,8 @@ export default function BeforeAfterComparison({
           <PlatformPreview
             platform={platform}
             caption={label(platform)}
-            footer={<Footer label="Original" value={platformScore(originalScore, platform)} />}
+            cornerSide="left"
+            corner={<CornerBadge label="Original" value={platformScore(originalScore, platform)} />}
           >
             <RcsCardPreview content={original} platform={platform} toggles={toggles} variant="original" />
           </PlatformPreview>
@@ -83,8 +82,9 @@ export default function BeforeAfterComparison({
           <PlatformPreview
             platform={platform}
             caption={label(platform)}
-            footer={
-              <Footer
+            cornerSide="right"
+            corner={
+              <CornerBadge
                 label="Improved"
                 value={platformScore(improvedScore, platform)}
                 delta={platformScore(improvedScore, platform) - platformScore(originalScore, platform)}
