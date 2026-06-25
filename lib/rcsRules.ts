@@ -19,7 +19,8 @@
  */
 
 import { applyVerticalCrop, getVisibleWindow, type VisibleWindow } from "@/lib/cropMath";
-import type { CardFormat, Platform, PlatformRenderRules } from "@/types/rcs";
+import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
+import type { CardFormat, CardOrientation, MediaHeight, Platform, PlatformRenderRules } from "@/types/rcs";
 
 export const IOS_RULES = {
   /** [xPlatform s15] "iOS renders the media at 60x60 DP." (Horizontal Rich Card) */
@@ -190,18 +191,25 @@ const ANDROID_VERTICAL_CROP_KEEP: Record<"low" | "medium" | "high", number> = {
 };
 
 /**
- * Resolves the render rules for a platform + card format + current text.
- * `totalTextLines` should come from `estimateTextLines` for the same platform.
+ * Resolves the render rules for a platform + card orientation + media height +
+ * current text. `totalTextLines` should come from `estimateTextLines` for the
+ * same platform.
+ *
+ * Orientation × mediaHeight cells:
+ *  - HORIZONTAL + null  → Horizontal Rich Card (formerly "compact")
+ *  - VERTICAL + MEDIUM  → Vertical Rich Card, medium container (21:9)
+ *  - VERTICAL + TALL    → Vertical Rich Card, tall container   (3:2)
  */
 export function getPlatformRules(
   platform: Platform,
-  cardFormat: CardFormat,
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
   totalTextLines: number,
 ): PlatformRenderRules {
   const severity = cropSeverityForLines(totalTextLines);
 
   if (platform === "ios") {
-    if (cardFormat === "compact") {
+    if (orientation === "HORIZONTAL") {
       // [xPlatform s15] Horizontal Rich Card on iOS: 60x60 DP thumbnail.
       return {
         mediaWidth: IOS_RULES.compactMediaSizeDp,
@@ -216,11 +224,11 @@ export function getPlatformRules(
         descriptionCharsPerLine: 30,
       };
     }
-    // [CardMedia p28] iOS vertical cards keep native aspect; format selection
-    // still changes the vertical container family (medium 21:9 vs tall 3:2),
-    // so we apply distinct caps per format. Long text tightens the cap.
+    // [CardMedia p28] iOS vertical cards keep native aspect; the height
+    // parameter selects the container family (MEDIUM 21:9 vs TALL 3:2),
+    // so we apply distinct caps. Long text tightens the cap.
     const baseCap =
-      cardFormat === "medium"
+      mediaHeight === "MEDIUM"
         ? IOS_RULES.verticalFormatMediaHeightCap.medium
         : IOS_RULES.verticalFormatMediaHeightCap.tall;
     const cap =
@@ -242,10 +250,10 @@ export function getPlatformRules(
   }
 
   // ─── Android ───
-  // Media box size is FIXED per format (independent of text); "more crop with
-  // longer text" is modelled by androidCropWindow's vertical punch-in, not by
-  // shrinking the box (which made the crop axis flip — see ANDROID_VERTICAL_CROP_KEEP).
-  if (cardFormat === "compact") {
+  // Media box size is FIXED per orientation/height (independent of text);
+  // "more crop with longer text" is modelled by androidCropWindow's vertical
+  // punch-in, not by shrinking the box (see ANDROID_VERTICAL_CROP_KEEP).
+  if (orientation === "HORIZONTAL") {
     // [CardMedia p13] fixed 128dp media width.
     return {
       mediaWidth: ANDROID_RULES.horizontalCardMediaWidthDp,
@@ -262,7 +270,7 @@ export function getPlatformRules(
   }
 
   const containerAspect =
-    cardFormat === "medium"
+    mediaHeight === "MEDIUM"
       ? ANDROID_RULES.verticalContainerAspect.medium // 21:9 [CardMedia p8]
       : ANDROID_RULES.verticalContainerAspect.tall; // 3:2  [CardMedia p8]
   return {
@@ -279,36 +287,70 @@ export function getPlatformRules(
   };
 }
 
+/** Legacy shim: resolves rules from a CardFormat by delegating via cardFormatToOrientationHeight. */
+export function getPlatformRulesByFormat(
+  platform: Platform,
+  cardFormat: CardFormat,
+  totalTextLines: number,
+): PlatformRenderRules {
+  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
+  return getPlatformRules(platform, orientation, mediaHeight, totalTextLines);
+}
+
 /**
  * The part of the source image visible inside the Android media container for a
- * given format and text length: the fixed-container cover crop, then a centred
- * vertical punch-in that grows with text severity [xPlatform s15]. Guaranteed
- * monotonic: more text → never more visible area. Shared by the scorer and the
- * preview so "what we score" and "what we draw" cannot diverge.
+ * given orientation+mediaHeight and text length: the fixed-container cover crop,
+ * then a centred vertical punch-in that grows with text severity [xPlatform s15].
+ * Guaranteed monotonic: more text → never more visible area. Shared by the
+ * scorer and the preview so "what we score" and "what we draw" cannot diverge.
  */
 export function androidCropWindow(
   imageAspect: number,
-  cardFormat: CardFormat,
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
   totalTextLines: number,
 ): VisibleWindow {
-  const rules = getPlatformRules("android", cardFormat, totalTextLines);
+  const rules = getPlatformRules("android", orientation, mediaHeight, totalTextLines);
   const base = getVisibleWindow(imageAspect, rules.mediaWidth / rules.mediaHeight);
   return applyVerticalCrop(base, ANDROID_VERTICAL_CROP_KEEP[rules.cropSeverity]);
 }
 
-/** Recommended source-asset aspect ratio per format [xPlatform s12/s16, CardMedia p8]. */
+/** Legacy shim: androidCropWindow keyed by CardFormat. */
+export function androidCropWindowByFormat(
+  imageAspect: number,
+  cardFormat: CardFormat,
+  totalTextLines: number,
+): VisibleWindow {
+  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
+  return androidCropWindow(imageAspect, orientation, mediaHeight, totalTextLines);
+}
+
+/** Recommended source-asset aspect ratio per orientation+mediaHeight [xPlatform s12/s16, CardMedia p8]. */
+export function recommendedAspectForOrientation(
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
+): {
+  aspect: number;
+  label: string;
+  citation: string;
+} {
+  if (orientation === "HORIZONTAL") {
+    return { aspect: 9 / 16, label: "9:16", citation: "xPlatform Playbook s15-s16" };
+  }
+  if (mediaHeight === "MEDIUM") {
+    return { aspect: 21 / 9, label: "21:9", citation: "Card Media Playbook p8" };
+  }
+  // VERTICAL + TALL (default for vertical)
+  // Comma-separated so the citation parser splits the two sources.
+  return { aspect: 3 / 2, label: "3:2", citation: "Card Media Playbook p8, xPlatform s12" };
+}
+
+/** Legacy shim: recommendedAspectForOrientation keyed by CardFormat. */
 export function recommendedAspectForFormat(cardFormat: CardFormat): {
   aspect: number;
   label: string;
   citation: string;
 } {
-  switch (cardFormat) {
-    case "compact":
-      return { aspect: 9 / 16, label: "9:16", citation: "xPlatform Playbook s15-s16" };
-    case "medium":
-      return { aspect: 21 / 9, label: "21:9", citation: "Card Media Playbook p8" };
-    case "tall":
-      // Comma-separated so the citation parser splits the two sources.
-      return { aspect: 3 / 2, label: "3:2", citation: "Card Media Playbook p8, xPlatform s12" };
-  }
+  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
+  return recommendedAspectForOrientation(orientation, mediaHeight);
 }

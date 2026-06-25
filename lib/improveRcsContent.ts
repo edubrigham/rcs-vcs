@@ -14,10 +14,10 @@
 
 import { clamp, pointInWindow } from "@/lib/cropMath";
 import {
-  androidCropWindow,
+  androidCropWindowByFormat as androidCropWindow,
   estimateLines,
   estimateTextLines,
-  getPlatformRules,
+  getPlatformRulesByFormat as getPlatformRules,
   SAFE_ZONE_RULES,
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";

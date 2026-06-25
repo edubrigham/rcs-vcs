@@ -21,7 +21,7 @@ import {
   visibleAreaFraction,
   type VisibleWindow,
 } from "@/lib/cropMath";
-import { androidCropWindow, estimateTextLines, getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
+import { androidCropWindowByFormat as androidCropWindow, estimateTextLines, getPlatformRulesByFormat as getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
 import type {
   FocalPoint,
   OverlayToggles,

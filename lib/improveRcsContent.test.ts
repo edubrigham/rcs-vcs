@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { improveRcsContent } from "@/lib/improveRcsContent";
-import { estimateTextLines, getPlatformRules } from "@/lib/rcsRules";
+import { estimateTextLines, getPlatformRulesByFormat as getPlatformRules } from "@/lib/rcsRules";
 import { scoreRcsContent } from "@/lib/scoreRcsContent";
 import { DEFAULT_CONTENT } from "@/lib/sampleContent";
 import type { CardFormat, Platform, RcsContent } from "@/types/rcs";

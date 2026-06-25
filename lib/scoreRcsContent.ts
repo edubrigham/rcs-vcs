@@ -20,9 +20,9 @@ import {
   visibleAreaFraction,
 } from "@/lib/cropMath";
 import {
-  androidCropWindow,
+  androidCropWindowByFormat as androidCropWindow,
   estimateTextLines,
-  getPlatformRules,
+  getPlatformRulesByFormat as getPlatformRules,
   IOS_RULES,
   RATIO_DEVIATION_TOLERANCE,
   recommendedAspectForFormat,
