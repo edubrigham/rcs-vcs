@@ -19,13 +19,14 @@ import {
   pointInWindow,
   visibleAreaFraction,
 } from "@/lib/cropMath";
+import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
 import {
-  androidCropWindowByFormat as androidCropWindow,
+  androidCropWindow,
   estimateTextLines,
-  getPlatformRulesByFormat as getPlatformRules,
+  getPlatformRules,
   IOS_RULES,
   RATIO_DEVIATION_TOLERANCE,
-  recommendedAspectForFormat,
+  recommendedAspectForOrientation,
   SAFE_ZONE_RULES,
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";
@@ -61,18 +62,20 @@ export function scoreText(content: RcsContent): SubScore {
   const warnings: Warning[] = [];
   const recommendations: Recommendation[] = [];
 
+  const { orientation, mediaHeight } = cardFormatToOrientationHeight(content.cardFormat);
+
   const iosLines = estimateTextLines(
     content.title,
     content.description,
-    getPlatformRules("ios", content.cardFormat, 0),
+    getPlatformRules("ios", orientation, mediaHeight, 0),
   );
   const androidLines = estimateTextLines(
     content.title,
     content.description,
-    getPlatformRules("android", content.cardFormat, 0),
+    getPlatformRules("android", orientation, mediaHeight, 0),
   );
-  const iosRules = getPlatformRules("ios", content.cardFormat, iosLines.totalLines);
-  const androidRules = getPlatformRules("android", content.cardFormat, androidLines.totalLines);
+  const iosRules = getPlatformRules("ios", orientation, mediaHeight, iosLines.totalLines);
+  const androidRules = getPlatformRules("android", orientation, mediaHeight, androidLines.totalLines);
 
   const iosTitleOverflow = Math.max(0, iosLines.titleLines - iosRules.maxTitleLines);
   const iosDescOverflow = Math.max(0, iosLines.descriptionLines - iosRules.maxDescriptionLines);
@@ -184,19 +187,21 @@ export function scoreImage(content: RcsContent): SubScore {
     return { ios: imageScoreIos, android: imageScoreAndroid, warnings, recommendations };
   }
 
+  const { orientation, mediaHeight } = cardFormatToOrientationHeight(content.cardFormat);
+
   const androidLines = estimateTextLines(
     content.title,
     content.description,
-    getPlatformRules("android", content.cardFormat, 0),
+    getPlatformRules("android", orientation, mediaHeight, 0),
   );
-  const androidRules = getPlatformRules("android", content.cardFormat, androidLines.totalLines);
+  const androidRules = getPlatformRules("android", orientation, mediaHeight, androidLines.totalLines);
 
   const aspect = content.imageMetadata.aspectRatio;
   const focal = content.focalPoint;
 
   // Android: fixed-container cover crop + a monotone vertical punch-in that
   // grows with text length [xPlatform s15, s28]. Shared with the preview.
-  const androidWindow = androidCropWindow(aspect, content.cardFormat, androidLines.totalLines);
+  const androidWindow = androidCropWindow(aspect, orientation, mediaHeight, androidLines.totalLines);
   const focalInsideAndroidCrop = pointInWindow(focal, androidWindow);
   const focalInsideSafeZone =
     focal.x >= SAFE_LO && focal.x <= SAFE_HI && focal.y >= SAFE_LO && focal.y <= SAFE_HI;
@@ -243,8 +248,8 @@ export function scoreImage(content: RcsContent): SubScore {
     );
   }
 
-  // iOS: compact format renders a 60x60 DP square thumbnail [xPlatform s15].
-  if (content.cardFormat === "compact") {
+  // iOS: compact format (HORIZONTAL) renders a 60x60 DP square thumbnail [xPlatform s15].
+  if (orientation === "HORIZONTAL") {
     const square = criticalSquareWindow(aspect);
     if (!pointInWindow(focal, square)) {
       imageScoreIos = clamp(imageScoreIos - 35, 0, 100);
@@ -306,8 +311,8 @@ export function scoreImage(content: RcsContent): SubScore {
     }
   }
 
-  // Recommended source ratio per format.
-  const rec = recommendedAspectForFormat(content.cardFormat);
+  // Recommended source ratio per orientation/height.
+  const rec = recommendedAspectForOrientation(orientation, mediaHeight);
   if (Math.abs(aspect - rec.aspect) / rec.aspect > RATIO_DEVIATION_TOLERANCE) {
     warnings.push({
       severity: "info",
@@ -423,11 +428,14 @@ export function scoreActions(content: RcsContent): SubScore {
       recommendation: "Keep every suggestion label at 25 characters or fewer (xPlatform Playbook s17).",
     });
   }
-  if (ctas.length >= 2 && !ctas.some((a) => a.primary)) {
+  // [xPlatform s21] "Primary" = the first non-reply action by position.
+  const firstAction = content.actions.find((a) => a.type !== "reply");
+  const primaryIsFirst = firstAction != null && content.actions[0]?.id === firstAction.id;
+  if (ctas.length >= 2 && !primaryIsFirst) {
     recommendations.push({
       category: "actions",
       message:
-        "Mark one action as primary and place it first — iOS always shows actions above replies (xPlatform Playbook s21).",
+        "Place the CTA action first — iOS always shows actions above replies (xPlatform Playbook s21).",
     });
   }
   // [xPlatform s21] An action placed AFTER a reply gets reordered above it on
@@ -472,17 +480,19 @@ export function scoreLayout(content: RcsContent): LayoutScore {
   const warnings: Warning[] = [];
   const recommendations: Recommendation[] = [];
 
+  const { orientation, mediaHeight } = cardFormatToOrientationHeight(content.cardFormat);
+
   const iosLines = estimateTextLines(
     content.title,
     content.description,
-    getPlatformRules("ios", content.cardFormat, 0),
+    getPlatformRules("ios", orientation, mediaHeight, 0),
   );
   const androidLines = estimateTextLines(
     content.title,
     content.description,
-    getPlatformRules("android", content.cardFormat, 0),
+    getPlatformRules("android", orientation, mediaHeight, 0),
   );
-  const androidRules = getPlatformRules("android", content.cardFormat, androidLines.totalLines);
+  const androidRules = getPlatformRules("android", orientation, mediaHeight, androidLines.totalLines);
 
   let layoutScore = 100;
   // s11 is cross-platform: penalise when EITHER platform exceeds 3 lines.

@@ -13,11 +13,12 @@
  */
 
 import { clamp, pointInWindow } from "@/lib/cropMath";
+import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
 import {
-  androidCropWindowByFormat as androidCropWindow,
+  androidCropWindow,
   estimateLines,
   estimateTextLines,
-  getPlatformRulesByFormat as getPlatformRules,
+  getPlatformRules,
   SAFE_ZONE_RULES,
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";
@@ -83,8 +84,9 @@ function shorten(text: string, target: number): string {
 
 /** Narrowest chars-per-line across both platforms for a field on a format. */
 function worstCharsPerLine(cardFormat: CardFormat, role: "title" | "description"): number {
-  const ios = getPlatformRules("ios", cardFormat, 0);
-  const android = getPlatformRules("android", cardFormat, 0);
+  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
+  const ios = getPlatformRules("ios", orientation, mediaHeight, 0);
+  const android = getPlatformRules("android", orientation, mediaHeight, 0);
   return role === "title"
     ? Math.min(ios.titleCharsPerLine, android.titleCharsPerLine)
     : Math.min(ios.descriptionCharsPerLine, android.descriptionCharsPerLine);
@@ -150,7 +152,8 @@ export function improveRcsContent(
   //    and shouldn't be mixed with rich-card suggestions in one turn, s17-s18).
   const ctas = input.actions.filter((a) => a.type !== "reply");
   const replies = input.actions.filter((a) => a.type === "reply");
-  const primaryCta = ctas.find((a) => a.primary) ?? ctas[0] ?? null;
+  // Primary CTA = first non-reply action by position (not a .primary flag).
+  const primaryCta = (input.actions[0] && input.actions[0].type !== "reply" ? input.actions[0] : ctas[0]) ?? null;
   const movedCtas = primaryCta ? ctas.filter((a) => a.id !== primaryCta.id) : [];
   const keptReplies = replies.slice(0, 3);
   const droppedReplies = replies.slice(3);
@@ -193,14 +196,16 @@ export function improveRcsContent(
   //    emit the re-crop change when something was actually re-cropped.
   let focalPoint = { ...input.focalPoint };
   if (input.imageUrl && input.imageMetadata) {
+    const { orientation, mediaHeight } = cardFormatToOrientationHeight(input.cardFormat);
     const lines = estimateTextLines(
       title,
       description,
-      getPlatformRules("android", input.cardFormat, 0),
+      getPlatformRules("android", orientation, mediaHeight, 0),
     );
     const window = androidCropWindow(
       input.imageMetadata.aspectRatio,
-      input.cardFormat,
+      orientation,
+      mediaHeight,
       lines.totalLines,
     );
     const insideCrop = pointInWindow(focalPoint, window);
