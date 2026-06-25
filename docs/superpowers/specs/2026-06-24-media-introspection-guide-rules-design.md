@@ -110,6 +110,12 @@ interface StandaloneRichCard {
   thumbnailImageAlignment?: "LEFT" | "RIGHT";   // horizontal only
   cardContent: CardContent;
 }
+
+// The Simulator API input is `rcsContentBody` (Broadcasts OAS, docs/rcs-broadcasts.yaml):
+// a discriminated `oneOf` on `type`. The carousel arm lands in Spec 2.
+interface MessageText { type: "text"; text: string }       // text ≤ 2000
+type RcsContentBody = MessageText | StandaloneRichCard;
+
 type Suggestion = SuggestedReply | SuggestedAction;
 interface SuggestedReply  { type: "reply";  text: string; postbackData?: string }   // text ≤25
 interface SuggestedAction { type: "action"; text: string; postbackData?: string; action: Action }
@@ -117,13 +123,14 @@ type Action =
   | { type: "openUrlAction"; url: string }            // url ≤2048
   | { type: "dialAction"; phoneNumber: string }
   | { type: "viewLocationAction"; latitude: number; longitude: number; label?: string }
-  | { type: "createCalendarEventAction"; startTime: string; endTime: string; title: string; description: string }
-  | { type: "shareLocationAction" };
+  | { type: "createCalendarEventAction"; startTime: string; endTime: string; title: string; description: string };
 ```
 
 PoC UI + improver operate on the visually-relevant subset (`reply`,
-`openUrlAction`, `dialAction`); other actions are modelled for fidelity and pass
-through the scorer.
+`openUrlAction`, `dialAction`); the other modelled actions (`viewLocation`,
+`createCalendarEvent`) pass through the scorer. `shareLocationAction` is **not**
+in the Broadcasts `rcsContentBody` contract and is excluded. A `text`-type body
+has no card — it gets the functional text-length check only, no visual score.
 
 **(b) Derived introspection — computed by fetching the URL** (NOT payload):
 
@@ -292,7 +299,11 @@ The framework-free kernel (`lib/`) with declarative rule tables; `docs/PORTING.m
 
 - **Spec 2 (Carousels):** `carouselRichCard` (2–10 cards), aggregate consistency,
   payload-size.
-- **Spec 3 (Envelope + adapter + Phase 2):** `RCSMessage` envelope, adapter, full
-  action taxonomy, and **Phase 2 AI-assistant content creation** (Agent SDK
-  improver grounded in the `rcs-playbook-rules` skill; vision-based focal
+- **Spec 3 (input dispatch + `text` + Phase 2):** dispatch the `rcsContentBody`
+  discriminator at the API boundary (`text` / `standaloneRichCard` /
+  `carouselRichCard`). **No broadcast envelope is passed to us** — the input is
+  *only* `rcsContentBody` (confirmed by `docs/rcs-broadcasts.yaml`), so there is
+  **no envelope adapter**. Add `text`-message handling (functional text-length
+  check; no visual score). Then **Phase 2 AI-assistant content creation** (Agent
+  SDK improver grounded in the `rcs-playbook-rules` skill; vision-based focal
   detection for video crop scoring).
