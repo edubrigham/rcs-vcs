@@ -29,8 +29,7 @@ export type Action =
   | { type: "openUrlAction"; url: string }
   | { type: "dialAction"; phoneNumber: string }
   | { type: "viewLocationAction"; latitude: number; longitude: number; label?: string }
-  | { type: "createCalendarEventAction"; startTime: string; endTime: string; title: string; description: string }
-  | { type: "shareLocationAction" };
+  | { type: "createCalendarEventAction"; startTime: string; endTime: string; title: string; description: string };
 export interface SuggestedReply {
   type: "reply";
   text: string;
@@ -56,6 +55,20 @@ export interface StandaloneRichCard {
   thumbnailImageAlignment?: "LEFT" | "RIGHT";
   cardContent: CardContent;
 }
+
+/** A plain-text message [rcsContentBody.oneOf → messageText]. */
+export interface MessageText {
+  type: "text";
+  /** ≤ 2000 chars. */
+  text: string;
+}
+
+/**
+ * The RCS Broadcasts API `rcsContentBody` — the exact object the Simulator API
+ * receives as input. Discriminated union on `type`. The carousel arm
+ * (`CarouselRichCard`) lands in Spec 2.
+ */
+export type RcsContentBody = MessageText | StandaloneRichCard;
 
 export interface MediaIntrospection {
   mediaType: MediaType;
