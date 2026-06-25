@@ -10,6 +10,63 @@ export type Platform = "ios" | "android";
 
 export type CardFormat = "compact" | "medium" | "tall";
 
+// Naxai-aligned types
+export type CardOrientation = "HORIZONTAL" | "VERTICAL";
+export type MediaHeight = "SHORT" | "MEDIUM" | "TALL";
+export type MediaType = "image" | "video";
+
+export interface ContentInfo {
+  fileUrl: string;
+  thumbnailUrl?: string;
+  forceRefresh?: boolean;
+}
+export interface Media {
+  height: MediaHeight;
+  contentInfo: ContentInfo;
+}
+
+export type Action =
+  | { type: "openUrlAction"; url: string }
+  | { type: "dialAction"; phoneNumber: string }
+  | { type: "viewLocationAction"; latitude: number; longitude: number; label?: string }
+  | { type: "createCalendarEventAction"; startTime: string; endTime: string; title: string; description: string }
+  | { type: "shareLocationAction" };
+export interface SuggestedReply {
+  type: "reply";
+  text: string;
+  postbackData?: string;
+}
+export interface SuggestedAction {
+  type: "action";
+  text: string;
+  postbackData?: string;
+  action: Action;
+}
+export type Suggestion = SuggestedReply | SuggestedAction;
+
+export interface CardContent {
+  title?: string;
+  description?: string;
+  media?: Media;
+  suggestions?: Suggestion[];
+}
+export interface StandaloneRichCard {
+  type: "standaloneRichCard";
+  cardOrientation: CardOrientation;
+  thumbnailImageAlignment?: "LEFT" | "RIGHT";
+  cardContent: CardContent;
+}
+
+export interface MediaIntrospection {
+  mediaType: MediaType;
+  mimeType: string;
+  fileSizeBytes: number;
+  thumbnailSizeBytes?: number;
+  width?: number; // image only
+  height?: number; // image only
+  aspectRatio?: number; // image only
+}
+
 export type RcsActionType = "openUrl" | "dial" | "reply";
 
 export interface RcsAction {
