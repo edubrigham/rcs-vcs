@@ -1,8 +1,10 @@
 /**
  * SSRF hardening for server-side fetches of user-supplied URLs. Pure predicates
- * (scheme + resolved-IP checks) so they're unit-testable; the route composes
- * them with DNS resolution.
+ * (scheme + address classification) so they're unit-testable; the route composes
+ * them with DNS resolution and connection pinning.
  */
+
+import ipaddr from "ipaddr.js";
 
 export class SsrfError extends Error {
   constructor(message: string) {
@@ -23,26 +25,24 @@ export function requireHttps(raw: string): URL {
   return u;
 }
 
-const BLOCKED_V4 = [
-  /^127\./, // loopback
-  /^10\./, // private
-  /^192\.168\./, // private
-  /^169\.254\./, // link-local + cloud metadata (169.254.169.254)
-  /^0\./, // "this" network
-  /^172\.(1[6-9]|2\d|3[01])\./, // private 172.16/12
-];
-
-export function isBlockedIpv4(ip: string): boolean {
-  return BLOCKED_V4.some((r) => r.test(ip));
-}
-
-export function isBlockedIpv6(ip: string): boolean {
-  const x = ip.toLowerCase();
-  return (
-    x === "::1" || // loopback
-    x.startsWith("fc") || // ULA
-    x.startsWith("fd") || // ULA
-    x.startsWith("fe80") || // link-local
-    x.startsWith("::ffff:") // IPv4-mapped
-  );
+/**
+ * True unless `ip` is a globally-routable public unicast address. Uses ipaddr.js
+ * CIDR classification — covers loopback, private, link-local (incl. the cloud
+ * metadata 169.254.169.254), carrier-grade NAT, reserved, multicast, broadcast,
+ * unique-local (ULA), etc. — and unwraps IPv4-mapped IPv6 (::ffff:a.b.c.d) so it
+ * is classified by its embedded v4 address. Unparseable input is blocked.
+ */
+export function isBlockedAddress(ip: string): boolean {
+  let addr: ReturnType<typeof ipaddr.parse>;
+  try {
+    addr = ipaddr.parse(ip);
+  } catch {
+    return true;
+  }
+  if (addr.kind() === "ipv6") {
+    const v6 = addr as ipaddr.IPv6;
+    if (v6.isIPv4MappedAddress()) addr = v6.toIPv4Address();
+  }
+  // 'unicast' is the only globally-routable public category for both families.
+  return addr.range() !== "unicast";
 }

@@ -9,8 +9,9 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { lookup } from "node:dns/promises";
+import { Agent } from "undici";
 import { introspectMedia } from "@/lib/media/introspect";
-import { isBlockedIpv4, isBlockedIpv6, requireHttps, SsrfError } from "@/lib/media/ssrfGuard";
+import { isBlockedAddress, requireHttps, SsrfError } from "@/lib/media/ssrfGuard";
 
 export const runtime = "nodejs"; // needs DNS/IP resolution for the SSRF check
 export const maxDuration = 10;
@@ -18,17 +19,43 @@ export const maxDuration = 10;
 const HEADER_BYTES = 65_535;
 const TIMEOUT_MS = 5_000;
 
-async function assertReachableHost(u: URL): Promise<void> {
-  const { address, family } = await lookup(u.hostname);
-  const blocked = family === 4 ? isBlockedIpv4(address) : isBlockedIpv6(address);
-  if (blocked) throw new SsrfError("URL resolves to a non-public address.");
+/**
+ * Resolve the host ONCE, validate EVERY returned address, and return an undici
+ * dispatcher pinned to a validated IP. This closes the DNS-rebinding / TOCTOU
+ * window — the connection uses the pre-validated address rather than a fresh
+ * re-resolution — while TLS SNI + certificate validation still use the original
+ * hostname.
+ */
+async function pinnedDispatcher(u: URL): Promise<Agent> {
+  const results = await lookup(u.hostname, { all: true });
+  if (results.length === 0) throw new SsrfError("DNS returned no addresses.");
+  for (const r of results) {
+    if (isBlockedAddress(r.address)) throw new SsrfError("URL resolves to a non-public address.");
+  }
+  const pinned = results[0];
+  return new Agent({
+    connect: {
+      // Force every connection to the pre-validated IP. Cast: undici's lookup
+      // type is stricter than the runtime contract we satisfy here.
+      lookup: ((_hostname: string, options: { all?: boolean }, cb: (err: Error | null, ...rest: unknown[]) => void) => {
+        if (options?.all) cb(null, [{ address: pinned.address, family: pinned.family }]);
+        else cb(null, pinned.address, pinned.family);
+      }) as never,
+    },
+  });
+}
+
+async function safeFetch(u: URL, init: RequestInit): Promise<Response> {
+  const dispatcher = await pinnedDispatcher(u);
+  // `dispatcher` is an undici extension to fetch's init.
+  return fetch(u, { ...init, dispatcher } as RequestInit & { dispatcher: Agent });
 }
 
 async function rangedRead(u: URL): Promise<{ bytes: Uint8Array; contentType: string; fileSizeBytes: number }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(u, {
+    const res = await safeFetch(u, {
       redirect: "manual",
       signal: ctrl.signal,
       headers: { Range: `bytes=0-${HEADER_BYTES}` },
@@ -68,8 +95,7 @@ async function rangedRead(u: URL): Promise<{ bytes: Uint8Array; contentType: str
 
 async function headSize(raw: string): Promise<number | undefined> {
   const u = requireHttps(raw);
-  await assertReachableHost(u);
-  const res = await fetch(u, { method: "HEAD", redirect: "manual" });
+  const res = await safeFetch(u, { method: "HEAD", redirect: "manual" });
   const len = res.headers.get("content-length");
   return len ? Number(len) : undefined;
 }
@@ -78,7 +104,6 @@ export async function POST(request: NextRequest) {
   try {
     const { url, thumbnailUrl } = (await request.json()) as { url: string; thumbnailUrl?: string };
     const u = requireHttps(url);
-    await assertReachableHost(u);
     const { bytes, contentType, fileSizeBytes } = await rangedRead(u);
     const thumbnailSizeBytes = thumbnailUrl ? await headSize(thumbnailUrl) : undefined;
     const meta = introspectMedia(bytes, { contentType, fileSizeBytes, thumbnailSizeBytes });
