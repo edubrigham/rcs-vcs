@@ -1,0 +1,331 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden vectors (Naxai port parity contract) > clean-vertical 1`] = `
+{
+  "functional": {
+    "passes": true,
+    "violations": [],
+  },
+  "quality": {
+    "actionScore": 100,
+    "androidScore": 100,
+    "imageSafeZoneScore": 100,
+    "iosScore": 100,
+    "layoutScore": 100,
+    "overallScore": 100,
+    "recommendations": [],
+    "textFitScore": 100,
+    "warnings": [],
+  },
+}
+`;
+
+exports[`golden vectors (Naxai port parity contract) > horizontal-thumbnail 1`] = `
+{
+  "functional": {
+    "passes": true,
+    "violations": [],
+  },
+  "quality": {
+    "actionScore": 100,
+    "androidScore": 100,
+    "imageSafeZoneScore": 100,
+    "iosScore": 100,
+    "layoutScore": 100,
+    "overallScore": 100,
+    "recommendations": [
+      {
+        "category": "image",
+        "message": "Export the asset at 9:16 (xPlatform Playbook s15-s16).",
+      },
+    ],
+    "textFitScore": 100,
+    "warnings": [
+      {
+        "category": "image",
+        "message": "The uploaded image (1.00:1) deviates from the recommended 9:16 ratio for this format.",
+        "platform": "both",
+        "recommendation": "Export the asset at 9:16 (xPlatform Playbook s15-s16).",
+        "severity": "info",
+      },
+    ],
+  },
+}
+`;
+
+exports[`golden vectors (Naxai port parity contract) > oversized-thumbnail 1`] = `
+{
+  "functional": {
+    "passes": false,
+    "violations": [
+      {
+        "actual": 150000,
+        "citation": "Naxai sendRCS",
+        "limit": "thumbnailSize",
+        "max": 100000,
+        "message": "Thumbnail exceeds 100 kB.",
+      },
+    ],
+  },
+  "quality": {
+    "actionScore": 60,
+    "androidScore": 91,
+    "imageSafeZoneScore": 100,
+    "iosScore": 91,
+    "layoutScore": 95,
+    "overallScore": 91,
+    "recommendations": [
+      {
+        "category": "layout",
+        "message": "For cross-platform campaigns Google recommends the Tall (3:2) vertical card to minimize rendering differences (xPlatform Playbook s13).",
+      },
+      {
+        "category": "actions",
+        "message": "Add a single clear CTA (xPlatform Playbook s11).",
+      },
+    ],
+    "textFitScore": 100,
+    "warnings": [
+      {
+        "category": "actions",
+        "message": "The card has no suggestions — users have no tap target.",
+        "platform": "both",
+        "recommendation": "Add a single clear CTA (xPlatform Playbook s11).",
+        "severity": "info",
+      },
+    ],
+  },
+}
+`;
+
+exports[`golden vectors (Naxai port parity contract) > text-only-no-media 1`] = `
+{
+  "functional": {
+    "passes": true,
+    "violations": [],
+  },
+  "quality": {
+    "actionScore": 60,
+    "androidScore": 74,
+    "imageSafeZoneScore": 55,
+    "iosScore": 74,
+    "layoutScore": 85,
+    "overallScore": 74,
+    "recommendations": [
+      {
+        "category": "image",
+        "message": "Upload an image to evaluate cropping and safe-zone risk.",
+      },
+      {
+        "category": "actions",
+        "message": "Add a single clear CTA (xPlatform Playbook s11).",
+      },
+    ],
+    "textFitScore": 100,
+    "warnings": [
+      {
+        "category": "image",
+        "message": "No media uploaded yet — rich cards perform best with an image.",
+        "platform": "both",
+        "recommendation": "Upload an image to evaluate cropping and safe-zone risk.",
+        "severity": "info",
+      },
+      {
+        "category": "actions",
+        "message": "The card has no suggestions — users have no tap target.",
+        "platform": "both",
+        "recommendation": "Add a single clear CTA (xPlatform Playbook s11).",
+        "severity": "info",
+      },
+    ],
+  },
+}
+`;
+
+exports[`golden vectors (Naxai port parity contract) > title-too-long 1`] = `
+{
+  "functional": {
+    "passes": false,
+    "violations": [
+      {
+        "actual": 201,
+        "citation": "Naxai sendRCS",
+        "limit": "titleLength",
+        "max": 200,
+        "message": "Title exceeds 200 characters.",
+      },
+    ],
+  },
+  "quality": {
+    "actionScore": 60,
+    "androidScore": 74,
+    "imageSafeZoneScore": 55,
+    "iosScore": 74,
+    "layoutScore": 85,
+    "overallScore": 74,
+    "recommendations": [
+      {
+        "category": "text",
+        "message": "Keep the title under 200 characters (xPlatform Playbook s23).",
+      },
+      {
+        "category": "image",
+        "message": "Upload an image to evaluate cropping and safe-zone risk.",
+      },
+      {
+        "category": "actions",
+        "message": "Add a single clear CTA (xPlatform Playbook s11).",
+      },
+    ],
+    "textFitScore": 100,
+    "warnings": [
+      {
+        "category": "text",
+        "message": "Title exceeds the 200-character cap of the iOS overflow full-text page; the rest is dropped.",
+        "platform": "ios",
+        "recommendation": "Keep the title under 200 characters (xPlatform Playbook s23).",
+        "severity": "warning",
+      },
+      {
+        "category": "image",
+        "message": "No media uploaded yet — rich cards perform best with an image.",
+        "platform": "both",
+        "recommendation": "Upload an image to evaluate cropping and safe-zone risk.",
+        "severity": "info",
+      },
+      {
+        "category": "actions",
+        "message": "The card has no suggestions — users have no tap target.",
+        "platform": "both",
+        "recommendation": "Add a single clear CTA (xPlatform Playbook s11).",
+        "severity": "info",
+      },
+    ],
+  },
+}
+`;
+
+exports[`golden vectors (Naxai port parity contract) > too-many-suggestions 1`] = `
+{
+  "functional": {
+    "passes": false,
+    "violations": [
+      {
+        "actual": 5,
+        "citation": "Naxai sendRCS",
+        "limit": "suggestionCount",
+        "max": 4,
+        "message": "A card allows at most 4 suggestions.",
+      },
+    ],
+  },
+  "quality": {
+    "actionScore": 50,
+    "androidScore": 72,
+    "imageSafeZoneScore": 55,
+    "iosScore": 72,
+    "layoutScore": 85,
+    "overallScore": 72,
+    "recommendations": [
+      {
+        "category": "image",
+        "message": "Upload an image to evaluate cropping and safe-zone risk.",
+      },
+      {
+        "category": "actions",
+        "message": "Add one suggested action as the CTA (xPlatform Playbook s11).",
+      },
+      {
+        "category": "actions",
+        "message": "Keep at most 3 suggested replies per card (xPlatform Playbook s17).",
+      },
+      {
+        "category": "actions",
+        "message": "Remove suggestions beyond the first four (xPlatform Playbook s17).",
+      },
+    ],
+    "textFitScore": 100,
+    "warnings": [
+      {
+        "category": "actions",
+        "message": "Rich cards support at most 4 suggestions (1 action + up to 3 replies); extras may be dropped.",
+        "platform": "both",
+        "recommendation": "Remove suggestions beyond the first four (xPlatform Playbook s17).",
+        "severity": "critical",
+      },
+      {
+        "category": "actions",
+        "message": "Rich cards support up to 3 suggested replies; extras may be dropped.",
+        "platform": "both",
+        "recommendation": "Keep at most 3 suggested replies per card (xPlatform Playbook s17).",
+        "severity": "warning",
+      },
+      {
+        "category": "image",
+        "message": "No media uploaded yet — rich cards perform best with an image.",
+        "platform": "both",
+        "recommendation": "Upload an image to evaluate cropping and safe-zone risk.",
+        "severity": "info",
+      },
+      {
+        "category": "actions",
+        "message": "The card has only suggested replies — there is no CTA action.",
+        "platform": "both",
+        "recommendation": "Add one suggested action as the CTA (xPlatform Playbook s11).",
+        "severity": "info",
+      },
+    ],
+  },
+}
+`;
+
+exports[`golden vectors (Naxai port parity contract) > unsupported-media 1`] = `
+{
+  "functional": {
+    "passes": false,
+    "violations": [
+      {
+        "actual": "image/bmp",
+        "citation": "RBM rich-cards",
+        "limit": "mediaType",
+        "message": "Unsupported media type “image/bmp”.",
+      },
+    ],
+  },
+  "quality": {
+    "actionScore": 60,
+    "androidScore": 92,
+    "imageSafeZoneScore": 100,
+    "iosScore": 92,
+    "layoutScore": 100,
+    "overallScore": 92,
+    "recommendations": [
+      {
+        "category": "image",
+        "message": "Export close to one of 2:1, 16:9 or 7:3 (RBM rich-cards).",
+      },
+      {
+        "category": "actions",
+        "message": "Add a single clear CTA (xPlatform Playbook s11).",
+      },
+    ],
+    "textFitScore": 100,
+    "warnings": [
+      {
+        "category": "image",
+        "message": "The uploaded image (1.00:1) is far from the nearest recommended vertical ratio (1.78:1).",
+        "platform": "both",
+        "recommendation": "Export close to one of 2:1, 16:9 or 7:3 (RBM rich-cards).",
+        "severity": "info",
+      },
+      {
+        "category": "actions",
+        "message": "The card has no suggestions — users have no tap target.",
+        "platform": "both",
+        "recommendation": "Add a single clear CTA (xPlatform Playbook s11).",
+        "severity": "info",
+      },
+    ],
+  },
+}
+`;
