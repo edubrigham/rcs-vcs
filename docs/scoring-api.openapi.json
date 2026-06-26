@@ -1,0 +1,160 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RCS Compatibility Scoring API",
+    "version": "0.1.0",
+    "description": "Two axes over a Naxai standaloneRichCard: functional compliance (would the sendRCS API accept it — a 422) and quality (how well it renders on iOS vs Android). Distinct from the upstream Naxai sendRCS contract (docs/rcs-broadcasts.yaml)."
+  },
+  "servers": [{ "url": "/api" }],
+  "paths": {
+    "/validate": {
+      "post": {
+        "summary": "Functional compliance (would the API accept this?)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "responses": {
+          "200": { "description": "Functional result", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FunctionalResult" } } } },
+          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/score": {
+      "post": {
+        "summary": "Quality score (0-100, iOS vs Android)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "responses": {
+          "200": { "description": "Score result", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoreResult" } } } },
+          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/improve": {
+      "post": {
+        "summary": "Deterministic improved card",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "responses": {
+          "200": { "description": "Improved card", "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } } },
+          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/analyze": {
+      "post": {
+        "summary": "Functional + quality in one call",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "responses": {
+          "200": { "description": "Both axes", "content": { "application/json": { "schema": { "type": "object", "properties": { "functional": { "$ref": "#/components/schemas/FunctionalResult" }, "quality": { "$ref": "#/components/schemas/ScoreResult" } } } } } },
+          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/media-info": {
+      "post": {
+        "summary": "Introspect a public media URL (SSRF-guarded, header bytes only)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["url"], "properties": { "url": { "type": "string", "format": "uri" }, "thumbnailUrl": { "type": "string", "format": "uri" } } }, "example": { "url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/JPEG_example_flower.jpg" } } } },
+        "responses": {
+          "200": { "description": "Media introspection", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MediaIntrospection" } } } },
+          "422": { "description": "Unfetchable / blocked URL", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "examples": {
+      "sample": {
+        "value": {
+          "card": {
+            "type": "standaloneRichCard",
+            "cardOrientation": "VERTICAL",
+            "cardContent": {
+              "title": "Spring Collection",
+              "description": "New arrivals, free returns.",
+              "media": { "height": "TALL", "contentInfo": { "fileUrl": "https://example.com/a.jpg" } },
+              "suggestions": [
+                { "type": "action", "text": "Shop now", "action": { "type": "openUrlAction", "url": "https://example.com/shop" } },
+                { "type": "reply", "text": "Notify me" }
+              ]
+            }
+          },
+          "media": { "mediaType": "image", "mimeType": "image/jpeg", "fileSizeBytes": 240000, "width": 1080, "height": 1920, "aspectRatio": 0.5625 },
+          "focal": { "x": 0.5, "y": 0.5 }
+        }
+      }
+    },
+    "schemas": {
+      "FocalPoint": { "type": "object", "properties": { "x": { "type": "number" }, "y": { "type": "number" } } },
+      "MediaIntrospection": {
+        "type": "object",
+        "required": ["mediaType", "mimeType", "fileSizeBytes"],
+        "properties": {
+          "mediaType": { "type": "string", "enum": ["image", "video"] },
+          "mimeType": { "type": "string" },
+          "fileSizeBytes": { "type": "integer" },
+          "thumbnailSizeBytes": { "type": "integer" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "aspectRatio": { "type": "number" }
+        }
+      },
+      "CardContent": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "media": { "type": "object", "properties": { "height": { "type": "string", "enum": ["SHORT", "MEDIUM", "TALL"] }, "contentInfo": { "type": "object", "properties": { "fileUrl": { "type": "string" }, "thumbnailUrl": { "type": "string" } } } } },
+          "suggestions": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+        }
+      },
+      "StandaloneRichCard": {
+        "type": "object",
+        "required": ["type", "cardOrientation", "cardContent"],
+        "properties": {
+          "type": { "type": "string", "const": "standaloneRichCard" },
+          "cardOrientation": { "type": "string", "enum": ["HORIZONTAL", "VERTICAL"] },
+          "thumbnailImageAlignment": { "type": "string", "enum": ["LEFT", "RIGHT"] },
+          "cardContent": { "$ref": "#/components/schemas/CardContent" }
+        }
+      },
+      "CardRequest": {
+        "type": "object",
+        "required": ["card"],
+        "properties": {
+          "card": { "$ref": "#/components/schemas/StandaloneRichCard" },
+          "media": { "$ref": "#/components/schemas/MediaIntrospection" },
+          "focal": { "$ref": "#/components/schemas/FocalPoint" }
+        }
+      },
+      "FunctionalViolation": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "string" },
+          "message": { "type": "string" },
+          "actual": {},
+          "max": {},
+          "citation": { "type": "string" }
+        }
+      },
+      "FunctionalResult": {
+        "type": "object",
+        "properties": {
+          "passes": { "type": "boolean" },
+          "violations": { "type": "array", "items": { "$ref": "#/components/schemas/FunctionalViolation" } }
+        }
+      },
+      "ScoreResult": {
+        "type": "object",
+        "properties": {
+          "overallScore": { "type": "integer" },
+          "iosScore": { "type": "integer" },
+          "androidScore": { "type": "integer" },
+          "imageSafeZoneScore": { "type": "integer" },
+          "textFitScore": { "type": "integer" },
+          "actionScore": { "type": "integer" },
+          "layoutScore": { "type": "integer" },
+          "warnings": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "recommendations": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+        }
+      },
+      "ApiError": { "type": "object", "properties": { "error": { "type": "string" }, "message": { "type": "string" } } }
+    }
+  }
+}
