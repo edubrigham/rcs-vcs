@@ -20,6 +20,7 @@ import { useSimulator } from "@/components/SimulatorProvider";
 import StepNav from "@/components/StepNav";
 import { scoreRcsContent } from "@/lib/scoreRcsContent";
 import { validateFunctional } from "@/lib/validateFunctional";
+import type { MediaIntrospection } from "@/types/rcs";
 
 export default function Home() {
   const { card, media, focal, setCard, setMedia, setFocal, toggles, setToggles } = useSimulator();
@@ -33,6 +34,20 @@ export default function Home() {
     setCard(parts.card);
     setMedia(parts.media);
     setFocal(parts.focal);
+  };
+
+  const onMediaUrlFetched = (url: string, fetched: MediaIntrospection) => {
+    // Write native state directly — the CardView round-trip would drop the
+    // introspected mime/size/type, keeping only width/height/aspect.
+    setCard({
+      ...card,
+      cardContent: {
+        ...card.cardContent,
+        media: { height: card.cardContent.media?.height ?? "TALL", contentInfo: { fileUrl: url } },
+      },
+    });
+    setMedia(fetched);
+    setFocal({ x: 0.5, y: 0.5 });
   };
 
   return (
@@ -51,7 +66,7 @@ export default function Home() {
 
       {/* ── Editor + previews ── */}
       <div className="grid gap-8 lg:grid-cols-[minmax(330px,390px)_1fr]">
-        <RcsInputPanel content={view} onContentChange={onContentChange} toggles={toggles} />
+        <RcsInputPanel content={view} onContentChange={onContentChange} onMediaUrlFetched={onMediaUrlFetched} toggles={toggles} />
 
         <div className="flex flex-col gap-8">
           <div className="overflow-hidden rounded-2xl border border-line bg-[radial-gradient(ellipse_at_top,rgba(56,130,246,0.08),transparent_60%)]">

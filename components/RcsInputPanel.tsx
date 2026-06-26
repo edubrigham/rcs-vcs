@@ -10,12 +10,13 @@
  * TODO: replace manual focal point with vision-based object/logo/text detection.
  */
 
-import { useId, useRef, type ChangeEvent, type PointerEvent } from "react";
+import { useId, useRef, useState, type ChangeEvent, type PointerEvent } from "react";
 import { clamp } from "@/lib/cropMath";
 import { SUGGESTION_RULES } from "@/lib/rcsRules";
 import { DEFAULT_VIEW, type CardView, type ViewAction, type ViewActionType } from "@/components/cardView";
+import { fetchMediaInfo } from "@/components/mediaClient";
 import InlineSlideCitation from "@/components/InlineSlideCitation";
-import type { OverlayToggles } from "@/types/rcs";
+import type { MediaIntrospection, OverlayToggles } from "@/types/rcs";
 import SafeZoneOverlay from "@/components/SafeZoneOverlay";
 
 export interface PlatformVisibility {
@@ -26,6 +27,7 @@ export interface PlatformVisibility {
 interface RcsInputPanelProps {
   content: CardView;
   onContentChange: (patch: Partial<CardView>) => void;
+  onMediaUrlFetched: (url: string, media: MediaIntrospection) => void;
   /** Read-only here: drives the focal-point editor's safe-zone overlay. */
   toggles: OverlayToggles;
 }
@@ -47,12 +49,29 @@ let actionSeq = 0;
 export default function RcsInputPanel({
   content,
   onContentChange,
+  onMediaUrlFetched,
   toggles,
 }: RcsInputPanelProps) {
   const fileInputId = useId();
   const objectUrlRef = useRef<string | null>(null);
   const focalBoxRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
+
+  async function handleFetchUrl() {
+    setFetching(true);
+    setUrlError(null);
+    try {
+      const media = await fetchMediaInfo(urlInput.trim());
+      onMediaUrlFetched(urlInput.trim(), media);
+    } catch (e) {
+      setUrlError((e as Error).message);
+    } finally {
+      setFetching(false);
+    }
+  }
 
   function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -160,6 +179,28 @@ export default function RcsInputPanel({
           </button>
         </div>
 
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="…or paste a public image/video URL"
+            className="min-w-0 flex-1 rounded-lg border border-line bg-field px-3 py-1.5 text-xs text-heading outline-none placeholder:text-faint focus:border-sky-500/60"
+          />
+          <button
+            type="button"
+            disabled={!urlInput.trim() || fetching}
+            onClick={handleFetchUrl}
+            className="shrink-0 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-medium text-body transition hover:border-line-strong disabled:opacity-50"
+          >
+            {fetching ? "Fetching…" : "Fetch"}
+          </button>
+        </div>
+        {urlError ? <p className="mt-1 text-[11px] text-rose-400">{urlError}</p> : null}
+        <p className="mt-1 font-mono text-[10px] text-faint">
+          Public URLs only — introspected server-side (size/dimensions, incl. video).
+        </p>
+
         {content.imageUrl && content.imageMetadata ? (
           <div className="mt-3">
             <div
@@ -195,6 +236,16 @@ export default function RcsInputPanel({
               Drag to mark the focal point (product, face, logo) ·{" "}
               {content.imageMetadata.width}×{content.imageMetadata.height} · ratio{" "}
               {content.imageMetadata.aspectRatio.toFixed(2)}
+            </p>
+          </div>
+        ) : null}
+
+        {content.imageUrl && content.mediaType === "video" ? (
+          <div className="mt-3 rounded-lg border border-line bg-field p-4 text-center">
+            <p className="text-2xl">🎬</p>
+            <p className="mt-1 text-xs text-body">Video media</p>
+            <p className="mt-0.5 font-mono text-[10px] text-muted">
+              Preview not rendered — introspection captures type &amp; size only.
             </p>
           </div>
         ) : null}

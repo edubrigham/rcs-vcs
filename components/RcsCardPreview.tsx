@@ -106,7 +106,11 @@ export default function RcsCardPreview({
       className="relative shrink-0 overflow-hidden bg-zinc-200"
       style={{ width: mediaWidth, height: mediaHeight }}
     >
-      {content.imageUrl ? (
+      {content.mediaType === "video" ? (
+        <div className="flex h-full w-full items-center justify-center bg-zinc-800 text-[10px] font-medium text-zinc-300">
+          ▶ video
+        </div>
+      ) : content.imageUrl ? (
         useExplicitWindow && window ? (
           <img
             src={content.imageUrl}
