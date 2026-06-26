@@ -28,6 +28,8 @@ interface RcsInputPanelProps {
   content: CardView;
   onContentChange: (patch: Partial<CardView>) => void;
   onMediaUrlFetched: (url: string, media: MediaIntrospection) => void;
+  /** Override the media fetcher (the playground injects a traffic-logged one). */
+  fetchMedia?: (url: string) => Promise<MediaIntrospection>;
   /** Read-only here: drives the focal-point editor's safe-zone overlay. */
   toggles: OverlayToggles;
 }
@@ -50,6 +52,7 @@ export default function RcsInputPanel({
   content,
   onContentChange,
   onMediaUrlFetched,
+  fetchMedia,
   toggles,
 }: RcsInputPanelProps) {
   const fileInputId = useId();
@@ -64,7 +67,7 @@ export default function RcsInputPanel({
     setFetching(true);
     setUrlError(null);
     try {
-      const media = await fetchMediaInfo(urlInput.trim());
+      const media = await (fetchMedia ?? fetchMediaInfo)(urlInput.trim());
       onMediaUrlFetched(urlInput.trim(), media);
     } catch (e) {
       setUrlError((e as Error).message);
