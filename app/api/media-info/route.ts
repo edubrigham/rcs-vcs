@@ -9,7 +9,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { lookup } from "node:dns/promises";
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch } from "undici";
 import { introspectMedia } from "@/lib/media/introspect";
 import { isBlockedAddress, requireHttps, SsrfError } from "@/lib/media/ssrfGuard";
 
@@ -47,8 +47,13 @@ async function pinnedDispatcher(u: URL): Promise<Agent> {
 
 async function safeFetch(u: URL, init: RequestInit): Promise<Response> {
   const dispatcher = await pinnedDispatcher(u);
-  // `dispatcher` is an undici extension to fetch's init.
-  return fetch(u, { ...init, dispatcher } as RequestInit & { dispatcher: Agent });
+  // Use undici's OWN fetch, NOT Node's global fetch. The global fetch is bundled
+  // with a different undici build and rejects our undici@8 Agent dispatcher
+  // (UND_ERR_INVALID_ARG: "invalid onRequestStart") → surfaces as "fetch failed".
+  // undici.fetch + undici.Agent are version-matched. The casts bridge undici's
+  // WHATWG types to the DOM lib types the rest of this file reads (body/getReader/
+  // headers/status are structurally identical at runtime).
+  return undiciFetch(u, { ...init, dispatcher } as never) as unknown as Promise<Response>;
 }
 
 async function rangedRead(u: URL): Promise<{ bytes: Uint8Array; contentType: string; fileSizeBytes: number }> {
