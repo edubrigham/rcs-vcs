@@ -13,17 +13,20 @@ import { cardToView, viewToParts, type CardView } from "@/components/cardView";
 import PlatformPreview from "@/components/PlatformPreview";
 import PreviewToolbar from "@/components/PreviewToolbar";
 import RcsCardPreview from "@/components/RcsCardPreview";
+import FunctionalBanner from "@/components/FunctionalBanner";
 import RcsInputPanel from "@/components/RcsInputPanel";
 import ScorePanel from "@/components/ScorePanel";
 import { useSimulator } from "@/components/SimulatorProvider";
 import StepNav from "@/components/StepNav";
 import { scoreRcsContent } from "@/lib/scoreRcsContent";
+import { validateFunctional } from "@/lib/validateFunctional";
 
 export default function Home() {
   const { card, media, focal, setCard, setMedia, setFocal, toggles, setToggles } = useSimulator();
 
   const view = useMemo(() => cardToView(card, media, focal), [card, media, focal]);
   const score = useMemo(() => scoreRcsContent(card, media, focal), [card, media, focal]);
+  const functional = useMemo(() => validateFunctional(card, media), [card, media]);
 
   const onContentChange = (patch: Partial<CardView>) => {
     const parts = viewToParts({ ...view, ...patch }, media);
@@ -73,7 +76,10 @@ export default function Home() {
             </div>
           </div>
 
-          <ScorePanel score={score} />
+          <div className="flex flex-col gap-3">
+            <FunctionalBanner result={functional} />
+            <ScorePanel score={score} />
+          </div>
         </div>
       </div>
     </main>
