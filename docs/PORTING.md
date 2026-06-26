@@ -4,14 +4,19 @@ This PoC is a **port-ready reference**, not the production service. The Naxai
 Core team ports the **logic kernel** (`lib/`) into the private API; the Vercel
 SPA (`app/`, `components/`) is a disposable demo shell you can ignore.
 
-## 1. What to port (and what to ignore)
+## 1. What you need (read these; ignore the rest)
 
-| Port this | Ignore this |
-|---|---|
-| Everything in **`lib/`** — pure, framework-free TypeScript (imports nothing from `react`/`next`). | `app/` (Next.js pages + the `/api/media-info` route), `components/` (React UI, incl. `components/cardView.ts` — a UI-only presentation model). |
+- **`lib/`** — the pure, framework-free kernel to re-implement. No React/Next, no
+  network/clock/randomness: same input → same output, translates to any language.
+  **Start here.**
+- **`docs/scoring-api.openapi.json`** — your API's I/O contract (input =
+  `rcsContentBody`; see §2).
+- **`docs/rcs-broadcasts.yaml`** — the Naxai input definition (`rcsContentBody`).
+- **`lib/__vectors__/`** — parity vectors: same input → identical output (§6).
 
-The kernel is deterministic: same input → same output, no network, no clock, no
-randomness. It translates directly to any language.
+**Ignore** (not ported, not required): `app/` + `components/` (the disposable
+Vercel demo/SPA), `docs/superpowers/` (our process notes), and
+`docs/SCORING-AND-ARCHITECTURE.md` (optional rationale/background).
 
 ## 2. The two entry points
 
@@ -71,12 +76,10 @@ The kernel types in `types/rcs.ts` mirror `docs/rcs-broadcasts.yaml` 1:1:
   on a truncated-buffer throw.
 - **Video:** **header-only** — type (from `content-type`) + size. No dimension
   parsing; no guide rule needs video dimensions.
-- The production API fetches via **HTTP Range** (never download whole files) with
-  the SSRF guard in `lib/media/ssrfGuard.ts`: https-only; resolve DNS and
-  validate **every** address (ipaddr.js CIDR classification); **pin the
-  connection to a validated IP** (defeats DNS rebinding/TOCTOU) while keeping the
-  hostname for TLS SNI; cap bytes + hard timeout. `app/api/media-info/route.ts`
-  is a working reference of the fetch+guard wiring.
+- **Fetch safely:** use an HTTP Range request (never download whole files) behind
+  an SSRF guard (https-only, validate the resolved IP, cap bytes + timeout).
+  Working reference: `app/api/_lib/fetchMedia.ts` (+ `lib/media/ssrfGuard.ts`) —
+  replicate the *intent* in your stack; you don't need our exact IP-pinning code.
 
 ## 5. Source precedence (when sources disagree)
 
