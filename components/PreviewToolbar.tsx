@@ -2,19 +2,48 @@
 
 /**
  * The preview toolbar shared by the Draft page and the Playbook Pass page:
- * card-format segmented control, iOS/Android visibility toggles, overlay filter
- * icons, and the rendering-approximation disclaimer. Keeping it in one place is
- * what makes the two pages feel continuous.
+ * 2-axis orientation/height control, iOS/Android visibility toggles, overlay
+ * filter icons, and the rendering-approximation disclaimer. Keeping it in one
+ * place is what makes the two pages feel continuous.
  */
 
 import type { ReactNode } from "react";
-import type { CardFormat, OverlayToggles, Platform } from "@/types/rcs";
+import type { CardFormat, CardOrientation, MediaHeight, OverlayToggles, Platform } from "@/types/rcs";
 import type { PlatformVisibility } from "@/components/RcsInputPanel";
 
 const DISCLAIMER =
   "This is an approximation based on the RCS UX playbooks. Actual rendering may vary by device, font size, app version, and orientation.";
 
-const CARD_FORMATS: CardFormat[] = ["compact", "medium", "tall"];
+/**
+ * Maps the 2-axis orientation+height selection back to the legacy `cardFormat`
+ * field while the data model still uses `cardFormat` (Task 9 will drop it).
+ *
+ * SHORT shows in the UI but maps to "medium" as a transitional placeholder —
+ * the native media-height model is not wired up yet.
+ */
+const ORIENTATION_TO_FORMAT: Record<CardOrientation, Partial<Record<MediaHeight, CardFormat>>> = {
+  HORIZONTAL: { SHORT: "compact", MEDIUM: "compact", TALL: "compact" },
+  VERTICAL: {
+    // SHORT is intentionally collapsed to "medium" until Task 9 exposes SHORT natively.
+    SHORT: "medium",
+    MEDIUM: "medium",
+    TALL: "tall",
+  },
+};
+
+/** Human-readable badge for the resolved render geometry. */
+const RENDER_BADGE: Record<CardFormat, string> = {
+  compact: "1:1 thumbnail",
+  medium: "3:2 vertical",
+  tall: "4:3 vertical",
+};
+
+/** Derive the 2-axis state from the current legacy `cardFormat`. */
+function formatToAxes(format: CardFormat): { orientation: CardOrientation; height: MediaHeight } {
+  if (format === "compact") return { orientation: "HORIZONTAL", height: "MEDIUM" };
+  if (format === "tall") return { orientation: "VERTICAL", height: "TALL" };
+  return { orientation: "VERTICAL", height: "MEDIUM" };
+}
 
 const OVERLAY_FILTERS: { key: keyof OverlayToggles; label: string; icon: ReactNode }[] = [
   {
@@ -78,26 +107,71 @@ export default function PreviewToolbar({
   // state (default iOS when ambiguous).
   const activePlatform: Platform = platforms?.android && !platforms.ios ? "android" : "ios";
 
+  // Derive the 2-axis UI state from the current legacy cardFormat.
+  const { orientation, height } = formatToAxes(cardFormat);
+
+  function handleOrientationChange(next: CardOrientation) {
+    // Both branches default to MEDIUM: HORIZONTAL collapses all heights to compact,
+    // and VERTICAL starts at medium. Height picker adjusts from there.
+    onFormatChange(ORIENTATION_TO_FORMAT[next]["MEDIUM"]!);
+  }
+
+  function handleHeightChange(next: MediaHeight) {
+    onFormatChange(ORIENTATION_TO_FORMAT[orientation][next]!);
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-4 py-2.5">
-      <div className="flex overflow-hidden rounded-lg border border-line">
-        {CARD_FORMATS.map((format, i) => (
-          <button
-            key={format}
-            type="button"
-            onClick={() => onFormatChange(format)}
-            aria-pressed={cardFormat === format}
-            className={`px-4 py-1.5 text-xs font-semibold capitalize transition ${
-              i > 0 ? "border-l border-line" : ""
-            } ${
-              cardFormat === format
-                ? "border-[var(--color-primary)] bg-panel-strong text-[var(--color-primary)]"
-                : "text-muted hover:text-body"
-            }`}
-          >
-            {format}
-          </button>
-        ))}
+      {/* Orientation toggle */}
+      <div className="flex items-center gap-2">
+        <div className="flex overflow-hidden rounded-lg border border-line">
+          {(["HORIZONTAL", "VERTICAL"] as const).map((o, i) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => handleOrientationChange(o)}
+              aria-pressed={orientation === o}
+              className={`px-3 py-1.5 text-xs font-semibold transition ${
+                i > 0 ? "border-l border-line" : ""
+              } ${
+                orientation === o
+                  ? "bg-panel-strong text-[var(--color-primary)]"
+                  : "text-muted hover:text-body"
+              }`}
+            >
+              {o === "HORIZONTAL" ? "Horizontal" : "Vertical"}
+            </button>
+          ))}
+        </div>
+
+        {/* Height picker — only visible when VERTICAL */}
+        {orientation === "VERTICAL" && (
+          <div className="flex overflow-hidden rounded-lg border border-line">
+            {(["SHORT", "MEDIUM", "TALL"] as const).map((h, i) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => handleHeightChange(h)}
+                aria-pressed={height === h}
+                title={h === "SHORT" ? "Short (maps to medium until Task 9)" : undefined}
+                className={`px-3 py-1.5 text-xs font-semibold capitalize transition ${
+                  i > 0 ? "border-l border-line" : ""
+                } ${
+                  height === h
+                    ? "bg-panel-strong text-[var(--color-primary)]"
+                    : "text-muted hover:text-body"
+                }`}
+              >
+                {h === "SHORT" ? "Short*" : h.charAt(0) + h.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Badge showing the resolved render geometry */}
+        <span className="rounded border border-line bg-panel px-2 py-0.5 font-mono text-[10px] text-muted">
+          {RENDER_BADGE[cardFormat]}
+        </span>
       </div>
 
       {platformMode === "single" && onPlatformsChange && (

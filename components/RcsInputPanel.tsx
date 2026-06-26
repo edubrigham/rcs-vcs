@@ -104,10 +104,12 @@ export default function RcsInputPanel({
     });
   }
 
-  function setPrimary(id: string) {
-    onContentChange({
-      actions: content.actions.map((a) => ({ ...a, primary: a.id === id })),
-    });
+  /** Move the action with `id` to index 0. Prominence is positional, not flagged. */
+  function makePrimary(id: string) {
+    const a = content.actions.find((x) => x.id === id);
+    if (!a) return;
+    const rest = content.actions.filter((x) => x.id !== id);
+    onContentChange({ actions: [a, ...rest] });
   }
 
   return (
@@ -270,16 +272,18 @@ export default function RcsInputPanel({
                     </option>
                   ))}
                 </select>
-                <label className="ml-auto flex cursor-pointer items-center gap-1 font-mono text-[10px] text-muted">
-                  <input
-                    type="radio"
-                    name="primary-action"
-                    checked={!!action.primary}
-                    onChange={() => setPrimary(action.id)}
-                    className="accent-sky-500"
-                  />
-                  primary
-                </label>
+                {/* Primary is determined by position (index 0). */}
+                {content.actions[0]?.id === action.id ? (
+                  <span className="ml-auto font-mono text-[10px] text-sky-500">primary</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => makePrimary(action.id)}
+                    className="ml-auto font-mono text-[10px] text-muted transition hover:text-sky-400"
+                  >
+                    Make primary
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label={`Remove action ${action.label}`}
