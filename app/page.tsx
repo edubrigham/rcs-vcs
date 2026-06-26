@@ -58,9 +58,14 @@ export default function Home() {
           <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-accent">
             Naxai · RCS Lab
           </p>
-          <a href="/api-docs" className="font-mono text-[11px] text-accent hover:underline">
-            API docs ↗
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="/api-playground" className="font-mono text-[11px] text-muted transition hover:text-body">
+              API playground
+            </a>
+            <a href="/api-docs" className="font-mono text-[11px] text-accent hover:underline">
+              API docs ↗
+            </a>
+          </div>
         </div>
         <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
           RCS Visual Compatibility Simulator
