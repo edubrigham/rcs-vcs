@@ -4,20 +4,14 @@
  * Phase 2 — Playbook Pass: deterministic playbook fixes applied to the card
  * authored on the Draft page, shown as a before/after.
  *
- * Reuses the Draft page's chrome (PreviewToolbar) so the two pages feel
- * continuous: the size buttons, platform toggles and overlay filters all drive
- * the same shared state, and switching size here re-runs the pass for that size.
- *
- * Layout: left 2/3 = toolbar + full-size Before→After device grid; right 1/3 =
- * compliance score (after) on top, changes (by category) below.
- *
- * TODO: replace deterministic improveRcsContent with the Anthropic Agent SDK
- *       (the agent must load /skills/rcs-playbook-rules as its source of truth).
+ * The kernel runs on the native Naxai model; this disposable shell uses the
+ * `CardView` presentation model (see components/cardView.ts).
  */
 
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import BeforeAfterComparison from "@/components/BeforeAfterComparison";
+import { cardToView, viewToParts, type CardView } from "@/components/cardView";
 import ChangesPanel from "@/components/ChangesPanel";
 import ImprovementScorePanel from "@/components/ImprovementScorePanel";
 import PreviewToolbar from "@/components/PreviewToolbar";
@@ -29,20 +23,30 @@ import type { Platform } from "@/types/rcs";
 
 export default function ImprovePage() {
   const router = useRouter();
-  const { content, patchContent, replaceContent, toggles, setToggles, platforms, setPlatforms } =
+  const { card, media, focal, replaceAll, setCard, setMedia, setFocal, toggles, setToggles, platforms, setPlatforms } =
     useSimulator();
 
-  const score = useMemo(() => scoreRcsContent(content), [content]);
-  const improved = useMemo(() => improveRcsContent(content, score), [content, score]);
-  const improvedScore = useMemo(() => scoreRcsContent(improved.improvedContent), [improved]);
+  const view = useMemo(() => cardToView(card, media, focal), [card, media, focal]);
+  const score = useMemo(() => scoreRcsContent(card, media, focal), [card, media, focal]);
+  const improved = useMemo(() => improveRcsContent(card, media, focal, score), [card, media, focal, score]);
+  const improvedScore = useMemo(
+    () => scoreRcsContent(improved.improvedContent, improved.improvedMedia, improved.improvedFocal),
+    [improved],
+  );
 
-  // Playbook Pass shows ONE platform at a time; derive it from the shared state
-  // (default iOS) and feed the comparison a single-platform visibility.
+  // Playbook Pass shows ONE platform at a time; derive it from the shared state.
   const activePlatform: Platform = platforms.android && !platforms.ios ? "android" : "ios";
   const singlePlatform = { ios: activePlatform === "ios", android: activePlatform === "android" };
 
+  const onContentChange = (patch: Partial<CardView>) => {
+    const parts = viewToParts({ ...view, ...patch }, media);
+    setCard(parts.card);
+    setMedia(parts.media);
+    setFocal(parts.focal);
+  };
+
   function saveChanges() {
-    replaceContent(improved.improvedContent);
+    replaceAll({ card: improved.improvedContent, media: improved.improvedMedia, focal: improved.improvedFocal });
     router.push("/");
   }
 
@@ -59,11 +63,6 @@ export default function ImprovePage() {
         <StepNav />
       </header>
 
-      {/* Same column geometry as Draft: ~360px sidebar LEFT, device panel RIGHT,
-          so the device area sits in the exact same spot on both pages. */}
-      {/* items-start: don't let the tall sidebar stretch the device panel — it
-          must keep its natural height so the viewport matches Draft exactly and
-          the Save button sits at the real device bottom. */}
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(330px,390px)_1fr]">
         <aside className="flex flex-col gap-4">
           <ImprovementScorePanel before={score} after={improvedScore} />
@@ -72,20 +71,19 @@ export default function ImprovePage() {
 
         <div className="overflow-hidden rounded-2xl border border-line bg-[radial-gradient(ellipse_at_top,rgba(56,130,246,0.08),transparent_60%)]">
           <PreviewToolbar
-            cardFormat={content.cardFormat}
-            onFormatChange={(cardFormat) => patchContent({ cardFormat })}
+            orientation={view.orientation}
+            height={view.height}
+            onOrientationChange={(orientation) => onContentChange({ orientation })}
+            onHeightChange={(height) => onContentChange({ height })}
             platformMode="single"
             platforms={platforms}
             onPlatformsChange={setPlatforms}
             toggles={toggles}
             onTogglesChange={setToggles}
           />
-          {/* Device area is identical to Draft (p-6 pb-2, centered). Labels are
-              corner badges and Save is absolutely positioned, so neither adds
-              height — the viewport is the exact same size as the Draft page. */}
           <div className="relative p-6 pb-2">
             <BeforeAfterComparison
-              original={content}
+              original={view}
               originalScore={score}
               improved={improved}
               improvedScore={improvedScore}

@@ -13,14 +13,9 @@
 import { useId, useRef, type ChangeEvent, type PointerEvent } from "react";
 import { clamp } from "@/lib/cropMath";
 import { SUGGESTION_RULES } from "@/lib/rcsRules";
-import { DEFAULT_CONTENT } from "@/lib/sampleContent";
+import { DEFAULT_VIEW, type CardView, type ViewAction, type ViewActionType } from "@/components/cardView";
 import InlineSlideCitation from "@/components/InlineSlideCitation";
-import type {
-  OverlayToggles,
-  RcsAction,
-  RcsActionType,
-  RcsContent,
-} from "@/types/rcs";
+import type { OverlayToggles } from "@/types/rcs";
 import SafeZoneOverlay from "@/components/SafeZoneOverlay";
 
 export interface PlatformVisibility {
@@ -29,19 +24,19 @@ export interface PlatformVisibility {
 }
 
 interface RcsInputPanelProps {
-  content: RcsContent;
-  onContentChange: (patch: Partial<RcsContent>) => void;
+  content: CardView;
+  onContentChange: (patch: Partial<CardView>) => void;
   /** Read-only here: drives the focal-point editor's safe-zone overlay. */
   toggles: OverlayToggles;
 }
 
-const ACTION_TYPES: { value: RcsActionType; label: string }[] = [
+const ACTION_TYPES: { value: ViewActionType; label: string }[] = [
   { value: "openUrl", label: "Open URL" },
   { value: "dial", label: "Dial" },
   { value: "reply", label: "Reply" },
 ];
 
-const VALUE_PLACEHOLDER: Record<RcsActionType, string> = {
+const VALUE_PLACEHOLDER: Record<ViewActionType, string> = {
   openUrl: "https://…",
   dial: "+32 2 555 01 23",
   reply: "Postback text",
@@ -98,7 +93,7 @@ export default function RcsInputPanel({
     });
   }
 
-  function updateAction(id: string, patch: Partial<RcsAction>) {
+  function updateAction(id: string, patch: Partial<ViewAction>) {
     onContentChange({
       actions: content.actions.map((a) => (a.id === id ? { ...a, ...patch } : a)),
     });
@@ -134,9 +129,9 @@ export default function RcsInputPanel({
             type="button"
             onClick={() =>
               onContentChange({
-                imageUrl: DEFAULT_CONTENT.imageUrl,
-                imageMetadata: DEFAULT_CONTENT.imageMetadata,
-                focalPoint: DEFAULT_CONTENT.focalPoint,
+                imageUrl: DEFAULT_VIEW.imageUrl,
+                imageMetadata: DEFAULT_VIEW.imageMetadata,
+                focalPoint: DEFAULT_VIEW.focalPoint,
               })
             }
             className="rounded-lg px-2 py-1.5 text-xs text-muted transition hover:text-body"
@@ -145,7 +140,7 @@ export default function RcsInputPanel({
           </button>
           <button
             type="button"
-            onClick={() => onContentChange({ ...DEFAULT_CONTENT })}
+            onClick={() => onContentChange({ ...DEFAULT_VIEW })}
             title="Reset the canvas to the sample demo"
             aria-label="Reset the canvas to the sample demo"
             className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-panel text-muted transition hover:border-line-strong hover:text-body"
@@ -192,7 +187,7 @@ export default function RcsInputPanel({
                 window={{ x0: 0, y0: 0, x1: 1, y1: 1 }}
                 imageAspect={content.imageMetadata.aspectRatio}
                 showSafeZone={toggles.showSafeZone}
-                showCriticalSquare={content.cardFormat === "compact"}
+                showCriticalSquare={content.orientation === "HORIZONTAL"}
                 focal={content.focalPoint}
               />
             </div>
@@ -262,7 +257,7 @@ export default function RcsInputPanel({
                 <select
                   value={action.type}
                   onChange={(e) =>
-                    updateAction(action.id, { type: e.target.value as RcsActionType })
+                    updateAction(action.id, { type: e.target.value as ViewActionType })
                   }
                   className="rounded-md border border-line bg-field px-1.5 py-1 text-[11px] text-body outline-none"
                 >

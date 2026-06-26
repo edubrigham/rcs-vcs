@@ -3,46 +3,22 @@
 /**
  * The preview toolbar shared by the Draft page and the Playbook Pass page:
  * 2-axis orientation/height control, iOS/Android visibility toggles, overlay
- * filter icons, and the rendering-approximation disclaimer. Keeping it in one
- * place is what makes the two pages feel continuous.
+ * filter icons, and the rendering-approximation disclaimer.
  */
 
 import type { ReactNode } from "react";
-import type { CardFormat, CardOrientation, MediaHeight, OverlayToggles, Platform } from "@/types/rcs";
+import type { CardOrientation, MediaHeight, OverlayToggles, Platform } from "@/types/rcs";
 import type { PlatformVisibility } from "@/components/RcsInputPanel";
 
 const DISCLAIMER =
   "This is an approximation based on the RCS UX playbooks. Actual rendering may vary by device, font size, app version, and orientation.";
 
-/**
- * Maps the 2-axis orientation+height selection back to the legacy `cardFormat`
- * field while the data model still uses `cardFormat` (Task 9 will drop it).
- *
- * SHORT shows in the UI but maps to "medium" as a transitional placeholder —
- * the native media-height model is not wired up yet.
- */
-const ORIENTATION_TO_FORMAT: Record<CardOrientation, Partial<Record<MediaHeight, CardFormat>>> = {
-  HORIZONTAL: { SHORT: "compact", MEDIUM: "compact", TALL: "compact" },
-  VERTICAL: {
-    // SHORT is intentionally collapsed to "medium" until Task 9 exposes SHORT natively.
-    SHORT: "medium",
-    MEDIUM: "medium",
-    TALL: "tall",
-  },
-};
-
 /** Human-readable badge for the resolved render geometry. */
-const RENDER_BADGE: Record<CardFormat, string> = {
-  compact: "1:1 thumbnail",
-  medium: "3:2 vertical",
-  tall: "4:3 vertical",
-};
-
-/** Derive the 2-axis state from the current legacy `cardFormat`. */
-function formatToAxes(format: CardFormat): { orientation: CardOrientation; height: MediaHeight } {
-  if (format === "compact") return { orientation: "HORIZONTAL", height: "MEDIUM" };
-  if (format === "tall") return { orientation: "VERTICAL", height: "TALL" };
-  return { orientation: "VERTICAL", height: "MEDIUM" };
+function renderBadge(orientation: CardOrientation, height: MediaHeight): string {
+  if (orientation === "HORIZONTAL") return "1:1 thumbnail";
+  if (height === "SHORT") return "7:2 vertical";
+  if (height === "MEDIUM") return "3:2 vertical";
+  return "4:3 vertical";
 }
 
 const OVERLAY_FILTERS: { key: keyof OverlayToggles; label: string; icon: ReactNode }[] = [
@@ -79,15 +55,16 @@ const OVERLAY_FILTERS: { key: keyof OverlayToggles; label: string; icon: ReactNo
 ];
 
 interface PreviewToolbarProps {
-  cardFormat: CardFormat;
-  onFormatChange: (format: CardFormat) => void;
+  orientation: CardOrientation;
+  height: MediaHeight;
+  onOrientationChange: (orientation: CardOrientation) => void;
+  onHeightChange: (height: MediaHeight) => void;
   toggles: OverlayToggles;
   onTogglesChange: (toggles: OverlayToggles) => void;
   /**
-   * Platform control. "none" (default) renders nothing — the page shows every
-   * platform (Draft, which always shows iOS + Android side by side). "single"
-   * renders an iOS↔Android segmented toggle showing one platform at a time
-   * (Playbook Pass); requires `platforms`/`onPlatformsChange`.
+   * Platform control. "none" (default) renders nothing. "single" renders an
+   * iOS↔Android segmented toggle showing one platform at a time (Playbook Pass);
+   * requires `platforms`/`onPlatformsChange`.
    */
   platformMode?: "none" | "single";
   platforms?: PlatformVisibility;
@@ -95,30 +72,17 @@ interface PreviewToolbarProps {
 }
 
 export default function PreviewToolbar({
-  cardFormat,
-  onFormatChange,
+  orientation,
+  height,
+  onOrientationChange,
+  onHeightChange,
   toggles,
   onTogglesChange,
   platformMode = "none",
   platforms,
   onPlatformsChange,
 }: PreviewToolbarProps) {
-  // Single-select: derive the one active platform from the shared visibility
-  // state (default iOS when ambiguous).
   const activePlatform: Platform = platforms?.android && !platforms.ios ? "android" : "ios";
-
-  // Derive the 2-axis UI state from the current legacy cardFormat.
-  const { orientation, height } = formatToAxes(cardFormat);
-
-  function handleOrientationChange(next: CardOrientation) {
-    // Both branches default to MEDIUM: HORIZONTAL collapses all heights to compact,
-    // and VERTICAL starts at medium. Height picker adjusts from there.
-    onFormatChange(ORIENTATION_TO_FORMAT[next]["MEDIUM"]!);
-  }
-
-  function handleHeightChange(next: MediaHeight) {
-    onFormatChange(ORIENTATION_TO_FORMAT[orientation][next]!);
-  }
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-4 py-2.5">
@@ -129,7 +93,7 @@ export default function PreviewToolbar({
             <button
               key={o}
               type="button"
-              onClick={() => handleOrientationChange(o)}
+              onClick={() => onOrientationChange(o)}
               aria-pressed={orientation === o}
               className={`px-3 py-1.5 text-xs font-semibold transition ${
                 i > 0 ? "border-l border-line" : ""
@@ -151,9 +115,8 @@ export default function PreviewToolbar({
               <button
                 key={h}
                 type="button"
-                onClick={() => handleHeightChange(h)}
+                onClick={() => onHeightChange(h)}
                 aria-pressed={height === h}
-                title={h === "SHORT" ? "Short (maps to medium until Task 9)" : undefined}
                 className={`px-3 py-1.5 text-xs font-semibold capitalize transition ${
                   i > 0 ? "border-l border-line" : ""
                 } ${
@@ -162,7 +125,7 @@ export default function PreviewToolbar({
                     : "text-muted hover:text-body"
                 }`}
               >
-                {h === "SHORT" ? "Short*" : h.charAt(0) + h.slice(1).toLowerCase()}
+                {h.charAt(0) + h.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -170,7 +133,7 @@ export default function PreviewToolbar({
 
         {/* Badge showing the resolved render geometry */}
         <span className="rounded border border-line bg-panel px-2 py-0.5 font-mono text-[10px] text-muted">
-          {RENDER_BADGE[cardFormat]}
+          {renderBadge(orientation, height)}
         </span>
       </div>
 

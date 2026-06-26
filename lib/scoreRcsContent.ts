@@ -7,10 +7,9 @@
  * No AI involved: every number traces back to a playbook rule (see citations)
  * or an explicit threshold in this file.
  *
- * Structure: `scoreRcsContent` composes four independent, pure sub-scorers —
- * `scoreText`, `scoreImage`, `scoreActions`, `scoreLayout`. Each is exported so
- * it can be unit-tested in isolation. None of them mutate shared state; the
- * composer aggregates their results.
+ * Operates on the native Naxai model: a `StandaloneRichCard` plus the derived
+ * `MediaIntrospection` (image dimensions) and the simulator-only `FocalPoint`.
+ * Structure: `scoreRcsContent` composes four independent, pure sub-scorers.
  */
 
 import {
@@ -19,7 +18,6 @@ import {
   pointInWindow,
   visibleAreaFraction,
 } from "@/lib/cropMath";
-import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
 import {
   androidCropWindow,
   estimateTextLines,
@@ -31,9 +29,12 @@ import {
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";
 import type {
-  RcsContent,
+  FocalPoint,
+  MediaIntrospection,
   Recommendation,
   ScoreResult,
+  StandaloneRichCard,
+  Suggestion,
   Warning,
 } from "@/types/rcs";
 
@@ -57,21 +58,46 @@ export interface LayoutScore {
   recommendations: Recommendation[];
 }
 
+/**
+ * The flat view of a suggestion the action-scorer reasons over: kind, label,
+ * value, and a positional id. `openUrl` is distinguished because only it gets
+ * the https check; every other action kind scores as a generic CTA.
+ */
+type ActionView = { kind: "openUrl" | "dial" | "reply"; label: string; value: string; id: string };
+
+function toActionViews(suggestions: Suggestion[]): ActionView[] {
+  return suggestions.map((s, i) => {
+    if (s.type === "reply") {
+      return { kind: "reply", label: s.text, value: s.postbackData ?? "", id: String(i) };
+    }
+    const value = s.action.type === "openUrlAction"
+      ? s.action.url
+      : s.action.type === "dialAction"
+        ? s.action.phoneNumber
+        : "";
+    const kind = s.action.type === "openUrlAction" ? "openUrl" : "dial";
+    return { kind, label: s.text, value, id: String(i) };
+  });
+}
+
 // ───────────────────────────── Text fit (30%) ─────────────────────────────
-export function scoreText(content: RcsContent): SubScore {
+export function scoreText(card: StandaloneRichCard): SubScore {
   const warnings: Warning[] = [];
   const recommendations: Recommendation[] = [];
 
-  const { orientation, mediaHeight } = cardFormatToOrientationHeight(content.cardFormat);
+  const title = card.cardContent.title ?? "";
+  const description = card.cardContent.description ?? "";
+  const orientation = card.cardOrientation;
+  const mediaHeight = card.cardContent.media?.height ?? null;
 
   const iosLines = estimateTextLines(
-    content.title,
-    content.description,
+    title,
+    description,
     getPlatformRules("ios", orientation, mediaHeight, 0),
   );
   const androidLines = estimateTextLines(
-    content.title,
-    content.description,
+    title,
+    description,
     getPlatformRules("android", orientation, mediaHeight, 0),
   );
   const iosRules = getPlatformRules("ios", orientation, mediaHeight, iosLines.totalLines);
@@ -144,7 +170,7 @@ export function scoreText(content: RcsContent): SubScore {
 
   // [xPlatform s23] Hard content caps of the overflow full-text page: beyond
   // these, even the separate page truncates.
-  if (content.title.length > IOS_RULES.titleFullTextCapChars) {
+  if (title.length > IOS_RULES.titleFullTextCapChars) {
     warnings.push({
       severity: "warning",
       platform: "ios",
@@ -153,7 +179,7 @@ export function scoreText(content: RcsContent): SubScore {
       recommendation: `Keep the title under ${IOS_RULES.titleFullTextCapChars} characters (xPlatform Playbook s23).`,
     });
   }
-  if (content.description.length > IOS_RULES.descriptionFullTextCapChars) {
+  if (description.length > IOS_RULES.descriptionFullTextCapChars) {
     warnings.push({
       severity: "warning",
       platform: "ios",
@@ -167,14 +193,19 @@ export function scoreText(content: RcsContent): SubScore {
 }
 
 // ─────────────────────────── Image & safe zone (35%) ───────────────────────
-export function scoreImage(content: RcsContent): SubScore {
+export function scoreImage(
+  card: StandaloneRichCard,
+  media?: MediaIntrospection,
+  focal?: FocalPoint,
+): SubScore {
   const warnings: Warning[] = [];
   const recommendations: Recommendation[] = [];
 
   let imageScoreIos = 100;
   let imageScoreAndroid = 100;
 
-  if (!content.imageUrl || !content.imageMetadata) {
+  const hasImage = card.cardContent.media != null && media != null && media.aspectRatio != null;
+  if (!hasImage) {
     imageScoreIos = 55;
     imageScoreAndroid = 55;
     warnings.push({
@@ -187,24 +218,27 @@ export function scoreImage(content: RcsContent): SubScore {
     return { ios: imageScoreIos, android: imageScoreAndroid, warnings, recommendations };
   }
 
-  const { orientation, mediaHeight } = cardFormatToOrientationHeight(content.cardFormat);
+  const orientation = card.cardOrientation;
+  const mediaHeight = card.cardContent.media!.height;
+  const title = card.cardContent.title ?? "";
+  const description = card.cardContent.description ?? "";
 
   const androidLines = estimateTextLines(
-    content.title,
-    content.description,
+    title,
+    description,
     getPlatformRules("android", orientation, mediaHeight, 0),
   );
   const androidRules = getPlatformRules("android", orientation, mediaHeight, androidLines.totalLines);
 
-  const aspect = content.imageMetadata.aspectRatio;
-  const focal = content.focalPoint;
+  const aspect = media!.aspectRatio!;
+  const focalPt = focal ?? { x: 0.5, y: 0.5 };
 
   // Android: fixed-container cover crop + a monotone vertical punch-in that
   // grows with text length [xPlatform s15, s28]. Shared with the preview.
   const androidWindow = androidCropWindow(aspect, orientation, mediaHeight, androidLines.totalLines);
-  const focalInsideAndroidCrop = pointInWindow(focal, androidWindow);
+  const focalInsideAndroidCrop = pointInWindow(focalPt, androidWindow);
   const focalInsideSafeZone =
-    focal.x >= SAFE_LO && focal.x <= SAFE_HI && focal.y >= SAFE_LO && focal.y <= SAFE_HI;
+    focalPt.x >= SAFE_LO && focalPt.x <= SAFE_HI && focalPt.y >= SAFE_LO && focalPt.y <= SAFE_HI;
 
   if (!focalInsideAndroidCrop) {
     imageScoreAndroid = 30;
@@ -251,7 +285,7 @@ export function scoreImage(content: RcsContent): SubScore {
   // iOS: compact format (HORIZONTAL) renders a 60x60 DP square thumbnail [xPlatform s15].
   if (orientation === "HORIZONTAL") {
     const square = criticalSquareWindow(aspect);
-    if (!pointInWindow(focal, square)) {
+    if (!pointInWindow(focalPt, square)) {
       imageScoreIos = clamp(imageScoreIos - 35, 0, 100);
       warnings.push({
         severity: "warning",
@@ -327,7 +361,7 @@ export function scoreImage(content: RcsContent): SubScore {
 }
 
 // ───────────────────────── Suggested actions (20%) ─────────────────────────
-export function scoreActions(content: RcsContent): SubScore {
+export function scoreActions(card: StandaloneRichCard): SubScore {
   const warnings: Warning[] = [];
   const recommendations: Recommendation[] = [];
 
@@ -335,9 +369,10 @@ export function scoreActions(content: RcsContent): SubScore {
   // and suggested REPLIES differently: the recommended pattern is a single
   // CTA action plus up to 3 replies [xPlatform s11, s17], and only ACTIONS
   // collapse into the iOS "Options" dropdown [xPlatform s42].
-  const ctas = content.actions.filter((a) => a.type !== "reply");
-  const replies = content.actions.filter((a) => a.type === "reply");
-  const actionCount = content.actions.length;
+  const actions = toActionViews(card.cardContent.suggestions ?? []);
+  const ctas = actions.filter((a) => a.kind !== "reply");
+  const replies = actions.filter((a) => a.kind === "reply");
+  const actionCount = actions.length;
 
   const baseActionScore =
     actionCount === 0
@@ -413,7 +448,7 @@ export function scoreActions(content: RcsContent): SubScore {
       recommendation: "Remove suggestions beyond the first four (xPlatform Playbook s17).",
     });
   }
-  const longLabels = content.actions.filter(
+  const longLabels = actions.filter(
     (a) => a.label.length > SUGGESTION_RULES.maxSuggestionLabelChars,
   );
   if (longLabels.length > 0) {
@@ -429,8 +464,8 @@ export function scoreActions(content: RcsContent): SubScore {
     });
   }
   // [xPlatform s21] "Primary" = the first non-reply action by position.
-  const firstAction = content.actions.find((a) => a.type !== "reply");
-  const primaryIsFirst = firstAction != null && content.actions[0]?.id === firstAction.id;
+  const firstAction = actions.find((a) => a.kind !== "reply");
+  const primaryIsFirst = firstAction != null && actions[0]?.id === firstAction.id;
   if (ctas.length >= 2 && !primaryIsFirst) {
     recommendations.push({
       category: "actions",
@@ -441,10 +476,10 @@ export function scoreActions(content: RcsContent): SubScore {
   // [xPlatform s21] An action placed AFTER a reply gets reordered above it on
   // iOS, so the authored order is misleading. A small penalty makes the
   // improver's reorder visible in the before/after delta.
-  const firstReplyIndex = content.actions.findIndex((a) => a.type === "reply");
+  const firstReplyIndex = actions.findIndex((a) => a.kind === "reply");
   const actionAfterReply =
     firstReplyIndex >= 0 &&
-    content.actions.some((a, i) => a.type !== "reply" && i > firstReplyIndex);
+    actions.some((a, i) => a.kind !== "reply" && i > firstReplyIndex);
   if (actionAfterReply) {
     iosActionScore = clamp(iosActionScore - 5, 0, 100);
     warnings.push({
@@ -455,9 +490,9 @@ export function scoreActions(content: RcsContent): SubScore {
       recommendation: "Place the suggested action before the replies (xPlatform Playbook s21).",
     });
   }
-  const insecureUrl = content.actions.find(
+  const insecureUrl = actions.find(
     (a) =>
-      a.type === "openUrl" &&
+      a.kind === "openUrl" &&
       a.value.trim() !== "" &&
       // URI schemes are case-insensitive (RFC 3986) — lowercase before checking.
       !a.value.trim().toLowerCase().startsWith("https://"),
@@ -476,20 +511,24 @@ export function scoreActions(content: RcsContent): SubScore {
 }
 
 // ─────────────────────── Layout / platform risk (15%) ──────────────────────
-export function scoreLayout(content: RcsContent): LayoutScore {
+export function scoreLayout(card: StandaloneRichCard): LayoutScore {
   const warnings: Warning[] = [];
   const recommendations: Recommendation[] = [];
 
-  const { orientation, mediaHeight } = cardFormatToOrientationHeight(content.cardFormat);
+  const orientation = card.cardOrientation;
+  const mediaHeight = card.cardContent.media?.height ?? null;
+  const title = card.cardContent.title ?? "";
+  const description = card.cardContent.description ?? "";
+  const hasMedia = card.cardContent.media != null;
 
   const iosLines = estimateTextLines(
-    content.title,
-    content.description,
+    title,
+    description,
     getPlatformRules("ios", orientation, mediaHeight, 0),
   );
   const androidLines = estimateTextLines(
-    content.title,
-    content.description,
+    title,
+    description,
     getPlatformRules("android", orientation, mediaHeight, 0),
   );
   const androidRules = getPlatformRules("android", orientation, mediaHeight, androidLines.totalLines);
@@ -501,9 +540,9 @@ export function scoreLayout(content: RcsContent): LayoutScore {
     androidLines.totalLines > IOS_RULES.maxRecommendedTextLines;
   if (iosLines.totalLines > IOS_RULES.tappableOverflowTotalLines) layoutScore -= 20;
   else if (overRecommended) layoutScore -= 10;
-  if (!content.imageUrl) layoutScore -= 15;
+  if (!hasMedia) layoutScore -= 15;
   if (androidRules.cropSeverity === "high") layoutScore -= 10;
-  if (content.cardFormat === "medium") {
+  if (orientation === "VERTICAL" && mediaHeight === "MEDIUM") {
     layoutScore -= 5;
     recommendations.push({
       category: "layout",
@@ -517,11 +556,15 @@ export function scoreLayout(content: RcsContent): LayoutScore {
 }
 
 // ───────────────────────────── Composition ─────────────────────────────────
-export function scoreRcsContent(content: RcsContent): ScoreResult {
-  const text = scoreText(content);
-  const image = scoreImage(content);
-  const actions = scoreActions(content);
-  const layout = scoreLayout(content);
+export function scoreRcsContent(
+  card: StandaloneRichCard,
+  media?: MediaIntrospection,
+  focal?: FocalPoint,
+): ScoreResult {
+  const text = scoreText(card);
+  const image = scoreImage(card, media, focal);
+  const actions = scoreActions(card);
+  const layout = scoreLayout(card);
 
   // Push order (text, image, actions, layout) drives recommendation order;
   // the returned warnings list is sorted by severity separately.

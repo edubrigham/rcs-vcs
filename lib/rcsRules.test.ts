@@ -2,17 +2,15 @@ import { describe, expect, it } from "vitest";
 import { visibleAreaFraction } from "@/lib/cropMath";
 import {
   androidCropWindow,
-  androidCropWindowByFormat,
   ANDROID_RULES,
   cropSeverityForLines,
   estimateLines,
   estimateTextLines,
   getPlatformRules,
-  getPlatformRulesByFormat,
   IOS_RULES,
-  recommendedAspectForFormat,
   recommendedAspectForOrientation,
 } from "@/lib/rcsRules";
+import type { CardOrientation, MediaHeight } from "@/types/rcs";
 
 describe("estimateLines (greedy word wrap)", () => {
   it("is 0 for empty/whitespace", () => {
@@ -52,52 +50,13 @@ describe("estimateTextLines", () => {
   });
 });
 
-describe("recommendedAspectForFormat (legacy shim)", () => {
-  it("returns the playbook source ratio per format", () => {
-    expect(recommendedAspectForFormat("compact")).toMatchObject({ aspect: 9 / 16, label: "9:16" });
-    expect(recommendedAspectForFormat("medium")).toMatchObject({ aspect: 21 / 9, label: "21:9" });
-    expect(recommendedAspectForFormat("tall")).toMatchObject({ aspect: 3 / 2, label: "3:2" });
-  });
-});
-
-describe("getPlatformRulesByFormat — legacy shim (key playbook facts)", () => {
-  it("renders iOS compact media as a 60×60 DP thumbnail (xPlatform s15)", () => {
-    const r = getPlatformRulesByFormat("ios", "compact", 0);
-    expect(r.mediaWidth).toBe(IOS_RULES.compactMediaSizeDp);
-    expect(r.mediaHeight).toBe(60);
-    expect(r.mediaLayout).toBe("thumbnail");
-    expect(r.maxVisibleActions).toBe(IOS_RULES.maxInlineActions);
-  });
-
-  it("uses the fixed 128 DP media width for the Android compact card (CardMedia p13)", () => {
-    const r = getPlatformRulesByFormat("android", "compact", 0);
-    expect(r.mediaWidth).toBe(ANDROID_RULES.horizontalCardMediaWidthDp);
-    expect(r.mediaLayout).toBe("horizontal");
-  });
-
-  it("gives each vertical format a DISTINCT media height (medium 21:9 ≠ tall 3:2)", () => {
-    const medium = getPlatformRulesByFormat("android", "medium", 0);
-    const tall = getPlatformRulesByFormat("android", "tall", 0);
-    expect(medium.mediaHeight).toBe(Math.round(medium.mediaWidth / (21 / 9)));
-    expect(tall.mediaHeight).toBe(Math.round(tall.mediaWidth / (3 / 2)));
-    expect(medium.mediaHeight).not.toBe(tall.mediaHeight);
-    expect(tall.mediaHeight).toBeGreaterThan(medium.mediaHeight);
-  });
-
-  it("keeps a FIXED media-box size per format regardless of text (crop is the punch-in, not the box)", () => {
-    const low = getPlatformRulesByFormat("android", "compact", 2);
-    const high = getPlatformRulesByFormat("android", "compact", 8);
-    expect(high.mediaHeight).toBe(low.mediaHeight);
-    expect(high.cropSeverity).toBe("high");
-  });
-});
-
-describe("getPlatformRules — orientation+height API", () => {
+describe("getPlatformRules — orientation + mediaHeight (key playbook facts)", () => {
   it("HORIZONTAL iOS renders the 60×60 thumbnail (xPlatform s15)", () => {
     const r = getPlatformRules("ios", "HORIZONTAL", null, 0);
     expect(r.mediaWidth).toBe(IOS_RULES.compactMediaSizeDp);
     expect(r.mediaHeight).toBe(60);
     expect(r.mediaLayout).toBe("thumbnail");
+    expect(r.maxVisibleActions).toBe(IOS_RULES.maxInlineActions);
   });
 
   it("VERTICAL+TALL iOS uses the tall media cap", () => {
@@ -118,43 +77,43 @@ describe("getPlatformRules — orientation+height API", () => {
     expect(r.mediaLayout).toBe("horizontal");
   });
 
-  it("VERTICAL+MEDIUM Android uses 21:9 container (CardMedia p8)", () => {
-    const r = getPlatformRules("android", "VERTICAL", "MEDIUM", 0);
-    expect(r.mediaHeight).toBe(Math.round(r.mediaWidth / (21 / 9)));
-    expect(r.mediaLayout).toBe("vertical");
+  it("gives each vertical height a DISTINCT media box (MEDIUM 21:9 ≠ TALL 3:2)", () => {
+    const medium = getPlatformRules("android", "VERTICAL", "MEDIUM", 0);
+    const tall = getPlatformRules("android", "VERTICAL", "TALL", 0);
+    expect(medium.mediaHeight).toBe(Math.round(medium.mediaWidth / (21 / 9)));
+    expect(tall.mediaHeight).toBe(Math.round(tall.mediaWidth / (3 / 2)));
+    expect(medium.mediaHeight).not.toBe(tall.mediaHeight);
+    expect(tall.mediaHeight).toBeGreaterThan(medium.mediaHeight);
   });
 
-  it("VERTICAL+TALL Android uses 3:2 container (CardMedia p8)", () => {
-    const r = getPlatformRules("android", "VERTICAL", "TALL", 0);
-    expect(r.mediaHeight).toBe(Math.round(r.mediaWidth / (3 / 2)));
-    expect(r.mediaLayout).toBe("vertical");
+  it("keeps a FIXED media-box size regardless of text (crop is the punch-in, not the box)", () => {
+    const low = getPlatformRules("android", "HORIZONTAL", null, 2);
+    const high = getPlatformRules("android", "HORIZONTAL", null, 8);
+    expect(high.mediaHeight).toBe(low.mediaHeight);
+    expect(high.cropSeverity).toBe("high");
   });
 
-  it("legacy shim maps compact → HORIZONTAL for Android", () => {
-    const byFmt = getPlatformRulesByFormat("android", "compact", 0);
-    const byOrient = getPlatformRules("android", "HORIZONTAL", null, 0);
-    expect(byOrient.mediaWidth).toBe(byFmt.mediaWidth);
-    expect(byOrient.mediaLayout).toBe(byFmt.mediaLayout);
-  });
-
-  it("recommendedAspectForOrientation returns same aspects as format shim", () => {
+  it("recommendedAspectForOrientation returns the playbook source ratios", () => {
     expect(recommendedAspectForOrientation("HORIZONTAL", null)).toMatchObject({ aspect: 9 / 16, label: "9:16" });
     expect(recommendedAspectForOrientation("VERTICAL", "MEDIUM")).toMatchObject({ aspect: 21 / 9, label: "21:9" });
     expect(recommendedAspectForOrientation("VERTICAL", "TALL")).toMatchObject({ aspect: 3 / 2, label: "3:2" });
   });
 });
 
-describe("androidCropWindowByFormat — monotone crop with text (xPlatform s15, BUG-1 guard)", () => {
-  // The crux of the fix: for EVERY format × aspect, more text must never show
-  // MORE of the image. The old shrink-the-box model violated this for landscape
-  // and near-square images (the cropped axis flipped). lines 2/5/8 → low/med/high.
-  const FORMATS = ["compact", "medium", "tall"] as const;
+describe("androidCropWindow — monotone crop with text (xPlatform s15, BUG-1 guard)", () => {
+  // The crux of the fix: for EVERY shape × aspect, more text must never show
+  // MORE of the image. lines 2/5/8 → low/med/high severity.
+  const SHAPES: { name: string; orientation: CardOrientation; height: MediaHeight | null }[] = [
+    { name: "HORIZONTAL", orientation: "HORIZONTAL", height: null },
+    { name: "VERTICAL+MEDIUM", orientation: "VERTICAL", height: "MEDIUM" },
+    { name: "VERTICAL+TALL", orientation: "VERTICAL", height: "TALL" },
+  ];
   const ASPECTS = [1.5, 21 / 9, 9 / 16, 1.0, 0.85];
-  for (const fmt of FORMATS) {
+  for (const shape of SHAPES) {
     for (const aspect of ASPECTS) {
-      it(`${fmt} @ aspect ${aspect.toFixed(3)}: visible area is non-increasing as text grows`, () => {
+      it(`${shape.name} @ aspect ${aspect.toFixed(3)}: visible area is non-increasing as text grows`, () => {
         const area = (lines: number) =>
-          visibleAreaFraction(androidCropWindowByFormat(aspect, fmt, lines));
+          visibleAreaFraction(androidCropWindow(aspect, shape.orientation, shape.height, lines));
         const lo = area(2);
         const mid = area(5);
         const hi = area(8);

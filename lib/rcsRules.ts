@@ -19,8 +19,7 @@
  */
 
 import { applyVerticalCrop, getVisibleWindow, type VisibleWindow } from "@/lib/cropMath";
-import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
-import type { CardFormat, CardOrientation, MediaHeight, Platform, PlatformRenderRules } from "@/types/rcs";
+import type { CardOrientation, MediaHeight, Platform, PlatformRenderRules } from "@/types/rcs";
 
 export const IOS_RULES = {
   /** [xPlatform s15] "iOS renders the media at 60x60 DP." (Horizontal Rich Card) */
@@ -287,16 +286,6 @@ export function getPlatformRules(
   };
 }
 
-/** Legacy shim: resolves rules from a CardFormat by delegating via cardFormatToOrientationHeight. */
-export function getPlatformRulesByFormat(
-  platform: Platform,
-  cardFormat: CardFormat,
-  totalTextLines: number,
-): PlatformRenderRules {
-  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
-  return getPlatformRules(platform, orientation, mediaHeight, totalTextLines);
-}
-
 /**
  * The part of the source image visible inside the Android media container for a
  * given orientation+mediaHeight and text length: the fixed-container cover crop,
@@ -313,16 +302,6 @@ export function androidCropWindow(
   const rules = getPlatformRules("android", orientation, mediaHeight, totalTextLines);
   const base = getVisibleWindow(imageAspect, rules.mediaWidth / rules.mediaHeight);
   return applyVerticalCrop(base, ANDROID_VERTICAL_CROP_KEEP[rules.cropSeverity]);
-}
-
-/** Legacy shim: androidCropWindow keyed by CardFormat. */
-export function androidCropWindowByFormat(
-  imageAspect: number,
-  cardFormat: CardFormat,
-  totalTextLines: number,
-): VisibleWindow {
-  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
-  return androidCropWindow(imageAspect, orientation, mediaHeight, totalTextLines);
 }
 
 /** Recommended source-asset aspect ratio per orientation+mediaHeight [xPlatform s12/s16, CardMedia p8]. */
@@ -343,14 +322,4 @@ export function recommendedAspectForOrientation(
   // VERTICAL + TALL (default for vertical)
   // Comma-separated so the citation parser splits the two sources.
   return { aspect: 3 / 2, label: "3:2", citation: "Card Media Playbook p8, xPlatform s12" };
-}
-
-/** Legacy shim: recommendedAspectForOrientation keyed by CardFormat. */
-export function recommendedAspectForFormat(cardFormat: CardFormat): {
-  aspect: number;
-  label: string;
-  citation: string;
-} {
-  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
-  return recommendedAspectForOrientation(orientation, mediaHeight);
 }

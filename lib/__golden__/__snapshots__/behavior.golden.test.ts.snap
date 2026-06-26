@@ -17,37 +17,42 @@ exports[`behavior golden > improve:compactNoImage 1`] = `
     },
   ],
   "improvedContent": {
-    "actions": [
-      {
-        "id": "a1",
-        "label": "Pre-order now",
-        "primary": true,
-        "type": "openUrl",
-        "value": "https://naxai.example/pulse-ultra",
-      },
-      {
-        "id": "a3",
-        "label": "Send me more info",
-        "type": "reply",
-        "value": "MORE_INFO",
-      },
-    ],
-    "cardFormat": "compact",
-    "description": "Meet the next generation of health",
-    "focalPoint": {
-      "x": 0.82,
-      "y": 0.18,
+    "cardContent": {
+      "description": "Meet the next generation of health",
+      "media": undefined,
+      "suggestions": [
+        {
+          "action": {
+            "type": "openUrlAction",
+            "url": "https://naxai.example/pulse-ultra",
+          },
+          "text": "Pre-order now",
+          "type": "action",
+        },
+        {
+          "postbackData": "MORE_INFO",
+          "text": "Send me more info",
+          "type": "reply",
+        },
+      ],
+      "title": "Pulse Ultra",
     },
-    "imageMetadata": undefined,
-    "imageUrl": null,
-    "title": "Pulse Ultra",
+    "cardOrientation": "HORIZONTAL",
+    "type": "standaloneRichCard",
   },
+  "improvedFocal": {
+    "x": 0.82,
+    "y": 0.18,
+  },
+  "improvedMedia": undefined,
   "secondaryActions": [
     {
-      "id": "a2",
-      "label": "Call a store advisor for details",
-      "type": "dial",
-      "value": "+3225550123",
+      "action": {
+        "phoneNumber": "+3225550123",
+        "type": "dialAction",
+      },
+      "text": "Call a store advisor for details",
+      "type": "action",
     },
   ],
 }
@@ -78,41 +83,54 @@ exports[`behavior golden > improve:default 1`] = `
     },
   ],
   "improvedContent": {
-    "actions": [
-      {
-        "id": "a1",
-        "label": "Pre-order now",
-        "primary": true,
-        "type": "openUrl",
-        "value": "https://naxai.example/pulse-ultra",
+    "cardContent": {
+      "description": "Meet the next generation of health",
+      "media": {
+        "contentInfo": {
+          "fileUrl": "data:image/svg+xml;utf8,%0A%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%221000%22%20viewBox%3D%220%200%20800%201000%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231c2742%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%2327406b%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%230e1424%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3CradialGradient%20id%3D%22glow%22%20cx%3D%220.82%22%20cy%3D%220.18%22%20r%3D%220.4%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220.55%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220%22%2F%3E%0A%20%20%20%20%3C%2FradialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22watch%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e8ecf5%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23aab4c8%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23bg)%22%2F%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23glow)%22%2F%3E%0A%20%20%3Cg%20opacity%3D%220.18%22%20stroke%3D%22%237e93bd%22%20stroke-width%3D%221.5%22%3E%0A%20%20%20%20%3Cline%20x1%3D%220%22%20y1%3D%22100%22%20x2%3D%22800%22%20y2%3D%22100%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22200%22%20x2%3D%22800%22%20y2%3D%22200%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22300%22%20x2%3D%22800%22%20y2%3D%22300%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22400%22%20x2%3D%22800%22%20y2%3D%22400%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22500%22%20x2%3D%22800%22%20y2%3D%22500%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22600%22%20x2%3D%22800%22%20y2%3D%22600%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22700%22%20x2%3D%22800%22%20y2%3D%22700%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22800%22%20x2%3D%22800%22%20y2%3D%22800%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22900%22%20x2%3D%22800%22%20y2%3D%22900%22%2F%3E%0A%20%20%20%20%3Cline%20x1%3D%22100%22%20y1%3D%220%22%20x2%3D%22100%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22200%22%20y1%3D%220%22%20x2%3D%22200%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22300%22%20y1%3D%220%22%20x2%3D%22300%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22400%22%20y1%3D%220%22%20x2%3D%22400%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22500%22%20y1%3D%220%22%20x2%3D%22500%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22600%22%20y1%3D%220%22%20x2%3D%22600%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22700%22%20y1%3D%220%22%20x2%3D%22700%22%20y2%3D%221000%22%2F%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3C!--%20product%3A%20a%20smartwatch%20at%20(82%25%2C%2018%25)%20%E2%80%94%20deliberately%20OUTSIDE%20the%20central%20safe%20zone%20--%3E%0A%20%20%3Cg%20transform%3D%22translate(656%20180)%22%3E%0A%20%20%20%20%3Crect%20x%3D%22-26%22%20y%3D%22-110%22%20width%3D%2252%22%20height%3D%22220%22%20rx%3D%2226%22%20fill%3D%22%2339455e%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2286%22%20fill%3D%22url(%23watch)%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22%2310182b%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22none%22%20stroke%3D%22%235b89ff%22%20stroke-width%3D%223%22%20stroke-dasharray%3D%228%2010%22%2F%3E%0A%20%20%20%20%3Ctext%20y%3D%22-12%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2230%22%20fill%3D%22%23cfe0ff%22%3E09%3A41%3C%2Ftext%3E%0A%20%20%20%20%3Ctext%20y%3D%2226%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2216%22%20fill%3D%22%235b89ff%22%3EPULSE%20ULTRA%3C%2Ftext%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22850%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2264%22%20fill%3D%22%23f2f5fb%22%3EPulse%20Ultra%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22904%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2230%22%20fill%3D%22%239fb0cf%22%3EThe%20watch%20that%20listens%20first.%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22952%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2222%22%20fill%3D%22%235b89ff%22%3Enaxai.demo%20%2F%20spring%20launch%3C%2Ftext%3E%0A%3C%2Fsvg%3E",
+        },
+        "height": "TALL",
       },
-      {
-        "id": "a3",
-        "label": "Send me more info",
-        "type": "reply",
-        "value": "MORE_INFO",
-      },
-    ],
-    "cardFormat": "compact",
-    "description": "Meet the next generation of health",
-    "focalPoint": {
-      "x": 0.7000000000000001,
-      "y": 0.30000000000000004,
+      "suggestions": [
+        {
+          "action": {
+            "type": "openUrlAction",
+            "url": "https://naxai.example/pulse-ultra",
+          },
+          "text": "Pre-order now",
+          "type": "action",
+        },
+        {
+          "postbackData": "MORE_INFO",
+          "text": "Send me more info",
+          "type": "reply",
+        },
+      ],
+      "title": "Pulse Ultra",
     },
-    "imageMetadata": {
-      "aspectRatio": 0.8,
-      "height": 1000,
-      "width": 800,
-    },
-    "imageUrl": "data:image/svg+xml;utf8,%0A%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%221000%22%20viewBox%3D%220%200%20800%201000%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231c2742%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%2327406b%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%230e1424%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3CradialGradient%20id%3D%22glow%22%20cx%3D%220.82%22%20cy%3D%220.18%22%20r%3D%220.4%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220.55%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220%22%2F%3E%0A%20%20%20%20%3C%2FradialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22watch%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e8ecf5%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23aab4c8%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23bg)%22%2F%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23glow)%22%2F%3E%0A%20%20%3Cg%20opacity%3D%220.18%22%20stroke%3D%22%237e93bd%22%20stroke-width%3D%221.5%22%3E%0A%20%20%20%20%3Cline%20x1%3D%220%22%20y1%3D%22100%22%20x2%3D%22800%22%20y2%3D%22100%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22200%22%20x2%3D%22800%22%20y2%3D%22200%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22300%22%20x2%3D%22800%22%20y2%3D%22300%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22400%22%20x2%3D%22800%22%20y2%3D%22400%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22500%22%20x2%3D%22800%22%20y2%3D%22500%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22600%22%20x2%3D%22800%22%20y2%3D%22600%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22700%22%20x2%3D%22800%22%20y2%3D%22700%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22800%22%20x2%3D%22800%22%20y2%3D%22800%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22900%22%20x2%3D%22800%22%20y2%3D%22900%22%2F%3E%0A%20%20%20%20%3Cline%20x1%3D%22100%22%20y1%3D%220%22%20x2%3D%22100%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22200%22%20y1%3D%220%22%20x2%3D%22200%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22300%22%20y1%3D%220%22%20x2%3D%22300%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22400%22%20y1%3D%220%22%20x2%3D%22400%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22500%22%20y1%3D%220%22%20x2%3D%22500%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22600%22%20y1%3D%220%22%20x2%3D%22600%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22700%22%20y1%3D%220%22%20x2%3D%22700%22%20y2%3D%221000%22%2F%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3C!--%20product%3A%20a%20smartwatch%20at%20(82%25%2C%2018%25)%20%E2%80%94%20deliberately%20OUTSIDE%20the%20central%20safe%20zone%20--%3E%0A%20%20%3Cg%20transform%3D%22translate(656%20180)%22%3E%0A%20%20%20%20%3Crect%20x%3D%22-26%22%20y%3D%22-110%22%20width%3D%2252%22%20height%3D%22220%22%20rx%3D%2226%22%20fill%3D%22%2339455e%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2286%22%20fill%3D%22url(%23watch)%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22%2310182b%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22none%22%20stroke%3D%22%235b89ff%22%20stroke-width%3D%223%22%20stroke-dasharray%3D%228%2010%22%2F%3E%0A%20%20%20%20%3Ctext%20y%3D%22-12%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2230%22%20fill%3D%22%23cfe0ff%22%3E09%3A41%3C%2Ftext%3E%0A%20%20%20%20%3Ctext%20y%3D%2226%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2216%22%20fill%3D%22%235b89ff%22%3EPULSE%20ULTRA%3C%2Ftext%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22850%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2264%22%20fill%3D%22%23f2f5fb%22%3EPulse%20Ultra%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22904%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2230%22%20fill%3D%22%239fb0cf%22%3EThe%20watch%20that%20listens%20first.%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22952%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2222%22%20fill%3D%22%235b89ff%22%3Enaxai.demo%20%2F%20spring%20launch%3C%2Ftext%3E%0A%3C%2Fsvg%3E",
-    "title": "Pulse Ultra",
+    "cardOrientation": "HORIZONTAL",
+    "type": "standaloneRichCard",
+  },
+  "improvedFocal": {
+    "x": 0.7000000000000001,
+    "y": 0.30000000000000004,
+  },
+  "improvedMedia": {
+    "aspectRatio": 0.8,
+    "fileSizeBytes": 0,
+    "height": 1000,
+    "mediaType": "image",
+    "mimeType": "image/svg+xml",
+    "width": 800,
   },
   "secondaryActions": [
     {
-      "id": "a2",
-      "label": "Call a store advisor for details",
-      "type": "dial",
-      "value": "+3225550123",
+      "action": {
+        "phoneNumber": "+3225550123",
+        "type": "dialAction",
+      },
+      "text": "Call a store advisor for details",
+      "type": "action",
     },
   ],
 }
@@ -143,41 +161,54 @@ exports[`behavior golden > improve:longText 1`] = `
     },
   ],
   "improvedContent": {
-    "actions": [
-      {
-        "id": "a1",
-        "label": "Pre-order now",
-        "primary": true,
-        "type": "openUrl",
-        "value": "https://naxai.example/pulse-ultra",
+    "cardContent": {
+      "description": "Long Long Long Long Long Long Long Long",
+      "media": {
+        "contentInfo": {
+          "fileUrl": "data:image/svg+xml;utf8,%0A%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%221000%22%20viewBox%3D%220%200%20800%201000%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231c2742%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%2327406b%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%230e1424%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3CradialGradient%20id%3D%22glow%22%20cx%3D%220.82%22%20cy%3D%220.18%22%20r%3D%220.4%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220.55%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220%22%2F%3E%0A%20%20%20%20%3C%2FradialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22watch%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e8ecf5%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23aab4c8%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23bg)%22%2F%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23glow)%22%2F%3E%0A%20%20%3Cg%20opacity%3D%220.18%22%20stroke%3D%22%237e93bd%22%20stroke-width%3D%221.5%22%3E%0A%20%20%20%20%3Cline%20x1%3D%220%22%20y1%3D%22100%22%20x2%3D%22800%22%20y2%3D%22100%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22200%22%20x2%3D%22800%22%20y2%3D%22200%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22300%22%20x2%3D%22800%22%20y2%3D%22300%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22400%22%20x2%3D%22800%22%20y2%3D%22400%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22500%22%20x2%3D%22800%22%20y2%3D%22500%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22600%22%20x2%3D%22800%22%20y2%3D%22600%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22700%22%20x2%3D%22800%22%20y2%3D%22700%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22800%22%20x2%3D%22800%22%20y2%3D%22800%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22900%22%20x2%3D%22800%22%20y2%3D%22900%22%2F%3E%0A%20%20%20%20%3Cline%20x1%3D%22100%22%20y1%3D%220%22%20x2%3D%22100%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22200%22%20y1%3D%220%22%20x2%3D%22200%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22300%22%20y1%3D%220%22%20x2%3D%22300%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22400%22%20y1%3D%220%22%20x2%3D%22400%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22500%22%20y1%3D%220%22%20x2%3D%22500%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22600%22%20y1%3D%220%22%20x2%3D%22600%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22700%22%20y1%3D%220%22%20x2%3D%22700%22%20y2%3D%221000%22%2F%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3C!--%20product%3A%20a%20smartwatch%20at%20(82%25%2C%2018%25)%20%E2%80%94%20deliberately%20OUTSIDE%20the%20central%20safe%20zone%20--%3E%0A%20%20%3Cg%20transform%3D%22translate(656%20180)%22%3E%0A%20%20%20%20%3Crect%20x%3D%22-26%22%20y%3D%22-110%22%20width%3D%2252%22%20height%3D%22220%22%20rx%3D%2226%22%20fill%3D%22%2339455e%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2286%22%20fill%3D%22url(%23watch)%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22%2310182b%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22none%22%20stroke%3D%22%235b89ff%22%20stroke-width%3D%223%22%20stroke-dasharray%3D%228%2010%22%2F%3E%0A%20%20%20%20%3Ctext%20y%3D%22-12%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2230%22%20fill%3D%22%23cfe0ff%22%3E09%3A41%3C%2Ftext%3E%0A%20%20%20%20%3Ctext%20y%3D%2226%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2216%22%20fill%3D%22%235b89ff%22%3EPULSE%20ULTRA%3C%2Ftext%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22850%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2264%22%20fill%3D%22%23f2f5fb%22%3EPulse%20Ultra%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22904%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2230%22%20fill%3D%22%239fb0cf%22%3EThe%20watch%20that%20listens%20first.%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22952%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2222%22%20fill%3D%22%235b89ff%22%3Enaxai.demo%20%2F%20spring%20launch%3C%2Ftext%3E%0A%3C%2Fsvg%3E",
+        },
+        "height": "TALL",
       },
-      {
-        "id": "a3",
-        "label": "Send me more info",
-        "type": "reply",
-        "value": "MORE_INFO",
-      },
-    ],
-    "cardFormat": "compact",
-    "description": "Long Long Long Long Long Long Long Long",
-    "focalPoint": {
-      "x": 0.7000000000000001,
-      "y": 0.30000000000000004,
+      "suggestions": [
+        {
+          "action": {
+            "type": "openUrlAction",
+            "url": "https://naxai.example/pulse-ultra",
+          },
+          "text": "Pre-order now",
+          "type": "action",
+        },
+        {
+          "postbackData": "MORE_INFO",
+          "text": "Send me more info",
+          "type": "reply",
+        },
+      ],
+      "title": "A very long",
     },
-    "imageMetadata": {
-      "aspectRatio": 0.8,
-      "height": 1000,
-      "width": 800,
-    },
-    "imageUrl": "data:image/svg+xml;utf8,%0A%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%221000%22%20viewBox%3D%220%200%20800%201000%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231c2742%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%2327406b%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%230e1424%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3CradialGradient%20id%3D%22glow%22%20cx%3D%220.82%22%20cy%3D%220.18%22%20r%3D%220.4%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220.55%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239fc4ff%22%20stop-opacity%3D%220%22%2F%3E%0A%20%20%20%20%3C%2FradialGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22watch%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e8ecf5%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23aab4c8%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23bg)%22%2F%3E%0A%20%20%3Crect%20width%3D%22800%22%20height%3D%221000%22%20fill%3D%22url(%23glow)%22%2F%3E%0A%20%20%3Cg%20opacity%3D%220.18%22%20stroke%3D%22%237e93bd%22%20stroke-width%3D%221.5%22%3E%0A%20%20%20%20%3Cline%20x1%3D%220%22%20y1%3D%22100%22%20x2%3D%22800%22%20y2%3D%22100%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22200%22%20x2%3D%22800%22%20y2%3D%22200%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22300%22%20x2%3D%22800%22%20y2%3D%22300%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22400%22%20x2%3D%22800%22%20y2%3D%22400%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22500%22%20x2%3D%22800%22%20y2%3D%22500%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22600%22%20x2%3D%22800%22%20y2%3D%22600%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22700%22%20x2%3D%22800%22%20y2%3D%22700%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22800%22%20x2%3D%22800%22%20y2%3D%22800%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%22900%22%20x2%3D%22800%22%20y2%3D%22900%22%2F%3E%0A%20%20%20%20%3Cline%20x1%3D%22100%22%20y1%3D%220%22%20x2%3D%22100%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22200%22%20y1%3D%220%22%20x2%3D%22200%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22300%22%20y1%3D%220%22%20x2%3D%22300%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22400%22%20y1%3D%220%22%20x2%3D%22400%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22500%22%20y1%3D%220%22%20x2%3D%22500%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22600%22%20y1%3D%220%22%20x2%3D%22600%22%20y2%3D%221000%22%2F%3E%3Cline%20x1%3D%22700%22%20y1%3D%220%22%20x2%3D%22700%22%20y2%3D%221000%22%2F%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3C!--%20product%3A%20a%20smartwatch%20at%20(82%25%2C%2018%25)%20%E2%80%94%20deliberately%20OUTSIDE%20the%20central%20safe%20zone%20--%3E%0A%20%20%3Cg%20transform%3D%22translate(656%20180)%22%3E%0A%20%20%20%20%3Crect%20x%3D%22-26%22%20y%3D%22-110%22%20width%3D%2252%22%20height%3D%22220%22%20rx%3D%2226%22%20fill%3D%22%2339455e%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2286%22%20fill%3D%22url(%23watch)%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22%2310182b%22%2F%3E%0A%20%20%20%20%3Ccircle%20r%3D%2270%22%20fill%3D%22none%22%20stroke%3D%22%235b89ff%22%20stroke-width%3D%223%22%20stroke-dasharray%3D%228%2010%22%2F%3E%0A%20%20%20%20%3Ctext%20y%3D%22-12%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2230%22%20fill%3D%22%23cfe0ff%22%3E09%3A41%3C%2Ftext%3E%0A%20%20%20%20%3Ctext%20y%3D%2226%22%20text-anchor%3D%22middle%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2216%22%20fill%3D%22%235b89ff%22%3EPULSE%20ULTRA%3C%2Ftext%3E%0A%20%20%3C%2Fg%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22850%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2264%22%20fill%3D%22%23f2f5fb%22%3EPulse%20Ultra%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22904%22%20font-family%3D%22Georgia%2C%20serif%22%20font-size%3D%2230%22%20fill%3D%22%239fb0cf%22%3EThe%20watch%20that%20listens%20first.%3C%2Ftext%3E%0A%20%20%3Ctext%20x%3D%2256%22%20y%3D%22952%22%20font-family%3D%22ui-monospace%2C%20monospace%22%20font-size%3D%2222%22%20fill%3D%22%235b89ff%22%3Enaxai.demo%20%2F%20spring%20launch%3C%2Ftext%3E%0A%3C%2Fsvg%3E",
-    "title": "A very long",
+    "cardOrientation": "HORIZONTAL",
+    "type": "standaloneRichCard",
+  },
+  "improvedFocal": {
+    "x": 0.7000000000000001,
+    "y": 0.30000000000000004,
+  },
+  "improvedMedia": {
+    "aspectRatio": 0.8,
+    "fileSizeBytes": 0,
+    "height": 1000,
+    "mediaType": "image",
+    "mimeType": "image/svg+xml",
+    "width": 800,
   },
   "secondaryActions": [
     {
-      "id": "a2",
-      "label": "Call a store advisor for details",
-      "type": "dial",
-      "value": "+3225550123",
+      "action": {
+        "phoneNumber": "+3225550123",
+        "type": "dialAction",
+      },
+      "text": "Call a store advisor for details",
+      "type": "action",
     },
   ],
 }

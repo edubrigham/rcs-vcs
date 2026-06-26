@@ -21,20 +21,14 @@ import {
   visibleAreaFraction,
   type VisibleWindow,
 } from "@/lib/cropMath";
-import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
 import { androidCropWindow, estimateTextLines, getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
-import type {
-  FocalPoint,
-  OverlayToggles,
-  Platform,
-  RcsAction,
-  RcsContent,
-} from "@/types/rcs";
+import type { CardView, ViewAction } from "@/components/cardView";
+import type { FocalPoint, OverlayToggles, Platform } from "@/types/rcs";
 import SafeZoneOverlay from "@/components/SafeZoneOverlay";
 import InlineSlideCitation from "@/components/InlineSlideCitation";
 
 interface RcsCardPreviewProps {
-  content: RcsContent;
+  content: CardView;
   platform: Platform;
   toggles: OverlayToggles;
   /** "improved" simulates a re-cropped asset zoomed onto the subject. */
@@ -46,7 +40,7 @@ interface RcsCardPreviewProps {
    */
   subjectPoint?: FocalPoint;
   /** Actions moved out of the card by the improver (shown as a footnote). */
-  secondaryActions?: RcsAction[];
+  secondaryActions?: ViewAction[];
 }
 
 function clampStyle(lines: number): CSSProperties {
@@ -58,7 +52,7 @@ function clampStyle(lines: number): CSSProperties {
   };
 }
 
-const ACTION_GLYPH: Record<RcsAction["type"], string> = {
+const ACTION_GLYPH: Record<ViewAction["type"], string> = {
   openUrl: "↗",
   dial: "✆",
   reply: "↩",
@@ -72,7 +66,8 @@ export default function RcsCardPreview({
   subjectPoint,
   secondaryActions = [],
 }: RcsCardPreviewProps) {
-  const { orientation, mediaHeight: mh } = cardFormatToOrientationHeight(content.cardFormat);
+  const orientation = content.orientation;
+  const mh = content.orientation === "HORIZONTAL" ? null : content.height;
   const lines = estimateTextLines(
     content.title,
     content.description,
@@ -144,7 +139,7 @@ export default function RcsCardPreview({
           window={window}
           imageAspect={aspect}
           showSafeZone={toggles.showSafeZone}
-          showCriticalSquare={content.cardFormat === "compact"}
+          showCriticalSquare={content.orientation === "HORIZONTAL"}
           focal={focalForCrop}
           minimal={mediaWidth < 100 || mediaHeight < 100}
         />
@@ -193,7 +188,7 @@ export default function RcsCardPreview({
 
   // Primary CTA = the first non-reply action by position (T5 model; no .primary flag).
   const primaryCta = content.actions.find((a) => a.type !== "reply");
-  const isPrimary = (a: RcsAction) => primaryCta?.id === a.id && content.actions[0]?.id === a.id;
+  const isPrimary = (a: ViewAction) => primaryCta?.id === a.id && content.actions[0]?.id === a.id;
 
   // ─────────────────────────── iOS ───────────────────────────
   if (platform === "ios") {

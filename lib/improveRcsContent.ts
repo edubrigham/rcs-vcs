@@ -3,17 +3,15 @@
  *
  * This intentionally contains zero AI. It applies the playbook's own
  * recommendations mechanically so the before/after comparison is reproducible
- * and explainable in a demo.
+ * and explainable in a demo. Operates on the native Naxai model.
  *
  * TODO: replace deterministic improveRcsContent with the Anthropic Agent SDK.
  *       The agent should load the /skills/rcs-playbook-rules skill as its
  *       source of truth and return the same ImprovedRcsContent shape.
  * TODO: replace manual focal point with vision-based object/logo/text detection.
- * TODO: add JSON import/export for actual Naxai RCS payloads.
  */
 
 import { clamp, pointInWindow } from "@/lib/cropMath";
-import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
 import {
   androidCropWindow,
   estimateLines,
@@ -23,13 +21,16 @@ import {
   SUGGESTION_RULES,
 } from "@/lib/rcsRules";
 import type {
-  CardFormat,
+  CardOrientation,
+  FocalPoint,
   ImprovedRcsContent,
   ImprovementCategory,
   ImprovementChange,
-  RcsAction,
-  RcsContent,
+  MediaHeight,
+  MediaIntrospection,
   ScoreResult,
+  StandaloneRichCard,
+  Suggestion,
 } from "@/types/rcs";
 
 /** Target rendered lines per field so title + description stay within ~3 [xPlatform s11]. */
@@ -48,9 +49,7 @@ const CLAUSE_BOUNDARY = /[,;:]|\s[—–-]\s/g;
 
 /**
  * Shortens copy with decreasing preference: whole text → first sentence →
- * last clause boundary inside the budget → word boundary. Clause cuts keep
- * the phrase grammatically whole ("…with a 10-day battery" instead of
- * "…battery, on-wrist").
+ * last clause boundary inside the budget → word boundary.
  */
 function shorten(text: string, target: number): string {
   const trimmed = text.trim().replace(/\s+/g, " ");
@@ -64,7 +63,7 @@ function shorten(text: string, target: number): string {
   // Prefer the last clause boundary in the window, if it keeps enough text.
   let clauseEnd = -1;
   for (const match of cut.matchAll(CLAUSE_BOUNDARY)) {
-    if (match.index > target * 0.5) clauseEnd = Math.max(clauseEnd, match.index);
+    if (match.index! > target * 0.5) clauseEnd = Math.max(clauseEnd, match.index!);
   }
   let head: string;
   if (clauseEnd > 0) {
@@ -82,9 +81,12 @@ function shorten(text: string, target: number): string {
   return head;
 }
 
-/** Narrowest chars-per-line across both platforms for a field on a format. */
-function worstCharsPerLine(cardFormat: CardFormat, role: "title" | "description"): number {
-  const { orientation, mediaHeight } = cardFormatToOrientationHeight(cardFormat);
+/** Narrowest chars-per-line across both platforms for a field on this card shape. */
+function worstCharsPerLine(
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
+  role: "title" | "description",
+): number {
   const ios = getPlatformRules("ios", orientation, mediaHeight, 0);
   const android = getPlatformRules("android", orientation, mediaHeight, 0);
   return role === "title"
@@ -94,16 +96,16 @@ function worstCharsPerLine(cardFormat: CardFormat, role: "title" | "description"
 
 /**
  * Shortens text until it actually renders within `maxLines` on the NARROWEST
- * platform (not merely under a character count) — so the improver's "fits the
- * recommended lines" claim is true on both iOS and Android.
+ * platform (not merely under a character count).
  */
 function shortenToLines(
   text: string,
-  cardFormat: CardFormat,
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
   role: "title" | "description",
   maxLines: number,
 ): string {
-  const cpl = worstCharsPerLine(cardFormat, role);
+  const cpl = worstCharsPerLine(orientation, mediaHeight, role);
   let result = shorten(text, cpl * maxLines);
   for (let guard = 0; guard < 50 && result.includes(" ") && estimateLines(result, cpl) > maxLines; guard++) {
     result = result.slice(0, result.lastIndexOf(" ")).replace(/[,;:\-–—]$/, "").trim();
@@ -114,31 +116,38 @@ function shortenToLines(
 /** Whether the text already fits within `maxLines` on both platforms. */
 function fitsLines(
   text: string,
-  cardFormat: CardFormat,
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
   role: "title" | "description",
   maxLines: number,
 ): boolean {
-  return estimateLines(text, worstCharsPerLine(cardFormat, role)) <= maxLines;
+  return estimateLines(text, worstCharsPerLine(orientation, mediaHeight, role)) <= maxLines;
 }
 
 export function improveRcsContent(
-  input: RcsContent,
+  card: StandaloneRichCard,
+  media: MediaIntrospection | undefined,
+  focal: FocalPoint | undefined,
   scoreResult: ScoreResult,
 ): ImprovedRcsContent {
   const changes: ImprovementChange[] = [];
   const change = (category: ImprovementCategory, message: string) =>
     changes.push({ category, message });
 
+  const orientation = card.cardOrientation;
+  const mediaHeight = card.cardContent.media?.height ?? null;
+  const suggestionsIn = card.cardContent.suggestions ?? [];
+
   // 1. Text: shorten until title + description actually render within ~3 lines
   //    on BOTH platforms (line-aware, not character-count — [xPlatform s11]).
-  let title = input.title.trim().replace(/\s+/g, " ");
-  if (!fitsLines(title, input.cardFormat, "title", TITLE_TARGET_LINES)) {
-    title = shortenToLines(title, input.cardFormat, "title", TITLE_TARGET_LINES);
+  let title = (card.cardContent.title ?? "").trim().replace(/\s+/g, " ");
+  if (title && !fitsLines(title, orientation, mediaHeight, "title", TITLE_TARGET_LINES)) {
+    title = shortenToLines(title, orientation, mediaHeight, "title", TITLE_TARGET_LINES);
     change("text", "Shortened the title to a single line to avoid wrapping and iOS truncation (xPlatform s11, s13).");
   }
-  let description = input.description.trim().replace(/\s+/g, " ");
-  if (!fitsLines(description, input.cardFormat, "description", DESCRIPTION_TARGET_LINES)) {
-    description = shortenToLines(description, input.cardFormat, "description", DESCRIPTION_TARGET_LINES);
+  let description = (card.cardContent.description ?? "").trim().replace(/\s+/g, " ");
+  if (description && !fitsLines(description, orientation, mediaHeight, "description", DESCRIPTION_TARGET_LINES)) {
+    description = shortenToLines(description, orientation, mediaHeight, "description", DESCRIPTION_TARGET_LINES);
     change(
       "text",
       "Shortened the description so title + description fit the recommended 3 lines on both platforms and reduce Android cropping (xPlatform s11, s15).",
@@ -146,27 +155,25 @@ export function improveRcsContent(
   }
 
   // 2. Suggestions: the playbook pattern is 1 CTA action + up to 3 replies
-  //    [xPlatform s11, s17]. Replies STAY in the card — they are compliant
-  //    functionality, not clutter. Only extra CTA actions move out, and that
-  //    trade-off is disclosed (message suggestions are transient on Android
-  //    and shouldn't be mixed with rich-card suggestions in one turn, s17-s18).
-  const ctas = input.actions.filter((a) => a.type !== "reply");
-  const replies = input.actions.filter((a) => a.type === "reply");
-  // Primary CTA = first non-reply action by position (not a .primary flag).
-  const primaryCta = (input.actions[0] && input.actions[0].type !== "reply" ? input.actions[0] : ctas[0]) ?? null;
-  const movedCtas = primaryCta ? ctas.filter((a) => a.id !== primaryCta.id) : [];
+  //    [xPlatform s11, s17]. Replies STAY in the card. Only extra CTA actions
+  //    move out, and that trade-off is disclosed.
+  const ctas = suggestionsIn.filter((s) => s.type !== "reply");
+  const replies = suggestionsIn.filter((s) => s.type === "reply");
+  // Primary CTA = first non-reply suggestion by position.
+  const primaryCta = (suggestionsIn[0] && suggestionsIn[0].type !== "reply" ? suggestionsIn[0] : ctas[0]) ?? null;
+  const movedCtas = primaryCta ? ctas.filter((s) => s !== primaryCta) : [];
   const keptReplies = replies.slice(0, 3);
   const droppedReplies = replies.slice(3);
 
-  let actions: RcsAction[] = input.actions;
-  let secondaryActions: RcsAction[] = [];
+  let suggestions: Suggestion[] = suggestionsIn;
+  let secondaryActions: Suggestion[] = [];
   if (movedCtas.length > 0 || droppedReplies.length > 0) {
-    actions = primaryCta ? [{ ...primaryCta, primary: true }, ...keptReplies] : keptReplies;
+    suggestions = primaryCta ? [primaryCta, ...keptReplies] : keptReplies;
     secondaryActions = [...movedCtas, ...droppedReplies];
     if (movedCtas.length > 0) {
       change(
         "actions",
-        `Kept the primary CTA (“${primaryCta!.label}”)${
+        `Kept the primary CTA (“${primaryCta!.text}”)${
           keptReplies.length > 0
             ? ` and ${keptReplies.length} suggested repl${keptReplies.length > 1 ? "ies" : "y"}`
             : ""
@@ -179,57 +186,49 @@ export function improveRcsContent(
         `Moved ${droppedReplies.length} repl${droppedReplies.length > 1 ? "ies" : "y"} beyond the 3-per-card limit out of the card (xPlatform s17).`,
       );
     }
-  } else if (primaryCta && input.actions[0]?.id !== primaryCta.id) {
-    actions = [{ ...primaryCta, primary: true }, ...input.actions.filter((a) => a.id !== primaryCta.id)];
+  } else if (primaryCta && suggestionsIn[0] !== primaryCta) {
+    suggestions = [primaryCta, ...suggestionsIn.filter((s) => s !== primaryCta)];
     change("actions", "Placed the CTA action first — iOS always shows actions above replies (xPlatform s21).");
   }
-  actions = actions.map((a) => {
-    if (a.label.length > SUGGESTION_RULES.maxSuggestionLabelChars) {
-      const label = shorten(a.label, SUGGESTION_RULES.maxSuggestionLabelChars);
+  suggestions = suggestions.map((s) => {
+    if (s.text.length > SUGGESTION_RULES.maxSuggestionLabelChars) {
+      const text = shorten(s.text, SUGGESTION_RULES.maxSuggestionLabelChars);
       change("actions", `Trimmed the CTA label to the 25-character suggestion limit (xPlatform s17).`);
-      return { ...a, label };
+      return { ...s, text };
     }
-    return a;
+    return s;
   });
 
   // 3. Focal point: pull critical content back into the safe zone — but only
   //    emit the re-crop change when something was actually re-cropped.
-  let focalPoint = { ...input.focalPoint };
-  if (input.imageUrl && input.imageMetadata) {
-    const { orientation, mediaHeight } = cardFormatToOrientationHeight(input.cardFormat);
+  let improvedFocal: FocalPoint = { ...(focal ?? { x: 0.5, y: 0.5 }) };
+  if (card.cardContent.media && media && media.aspectRatio != null) {
     const lines = estimateTextLines(
       title,
       description,
       getPlatformRules("android", orientation, mediaHeight, 0),
     );
-    const window = androidCropWindow(
-      input.imageMetadata.aspectRatio,
-      orientation,
-      mediaHeight,
-      lines.totalLines,
-    );
-    const insideCrop = pointInWindow(focalPoint, window);
+    const window = androidCropWindow(media.aspectRatio, orientation, mediaHeight, lines.totalLines);
+    const insideCrop = pointInWindow(improvedFocal, window);
     const insideSafeZone =
-      focalPoint.x >= SAFE_LO &&
-      focalPoint.x <= SAFE_HI &&
-      focalPoint.y >= SAFE_LO &&
-      focalPoint.y <= SAFE_HI;
+      improvedFocal.x >= SAFE_LO &&
+      improvedFocal.x <= SAFE_HI &&
+      improvedFocal.y >= SAFE_LO &&
+      improvedFocal.y <= SAFE_HI;
 
-    // The relocated focal models the RE-EXPORTED asset (subject centered) for
-    // scoring; the improved preview zooms to the subject's original position
-    // via its subjectPoint prop.
+    // The relocated focal models the RE-EXPORTED asset (subject centered).
     let recropped = false;
     if (!insideCrop) {
-      focalPoint = { x: 0.5, y: 0.5 };
+      improvedFocal = { x: 0.5, y: 0.5 };
       recropped = true;
       change(
         "image",
         "The subject was outside the Android visible crop area — the simulated re-crop re-centers it. Export the asset with the subject near the center (Card Media p12).",
       );
     } else if (!insideSafeZone) {
-      focalPoint = {
-        x: clamp(focalPoint.x, SAFE_LO + 0.1, SAFE_HI - 0.1),
-        y: clamp(focalPoint.y, SAFE_LO + 0.1, SAFE_HI - 0.1),
+      improvedFocal = {
+        x: clamp(improvedFocal.x, SAFE_LO + 0.1, SAFE_HI - 0.1),
+        y: clamp(improvedFocal.y, SAFE_LO + 0.1, SAFE_HI - 0.1),
       };
       recropped = true;
       change(
@@ -245,11 +244,9 @@ export function improveRcsContent(
     }
   }
 
-  // 4. Format: keep the author's selected format — it is the view control on
-  //    the Playbook Pass, and silently switching medium→tall made every
-  //    medium card render identically to a tall one. Surface Tall as advice.
-  const cardFormat = input.cardFormat;
-  if (cardFormat === "medium") {
+  // 4. Format: keep the author's selected card shape. Surface Tall as advice
+  //    for a MEDIUM vertical card.
+  if (orientation === "VERTICAL" && mediaHeight === "MEDIUM") {
     change(
       "format",
       "Kept the Medium format you selected; for the best cross-platform parity consider the Tall (3:2) card, which renders most consistently (xPlatform s13).",
@@ -265,15 +262,20 @@ export function improveRcsContent(
     );
   }
 
-  return {
-    improvedContent: {
-      ...input,
-      title,
-      description,
-      actions,
-      focalPoint,
-      cardFormat,
+  const improvedContent: StandaloneRichCard = {
+    ...card,
+    cardContent: {
+      ...card.cardContent,
+      title: title || undefined,
+      description: description || undefined,
+      suggestions: suggestions.length ? suggestions : undefined,
     },
+  };
+
+  return {
+    improvedContent,
+    improvedMedia: media,
+    improvedFocal,
     secondaryActions,
     changes,
   };

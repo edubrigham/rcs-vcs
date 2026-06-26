@@ -8,8 +8,6 @@
 
 export type Platform = "ios" | "android";
 
-export type CardFormat = "compact" | "medium" | "tall";
-
 // Naxai-aligned types
 export type CardOrientation = "HORIZONTAL" | "VERTICAL";
 export type MediaHeight = "SHORT" | "MEDIUM" | "TALL";
@@ -80,37 +78,10 @@ export interface MediaIntrospection {
   aspectRatio?: number; // image only
 }
 
-export type RcsActionType = "openUrl" | "dial" | "reply";
-
-export interface RcsAction {
-  id: string;
-  type: RcsActionType;
-  label: string;
-  value: string;
-  primary?: boolean;
-}
-
 /** Normalized image coordinates: { x: 0..1, y: 0..1 } from the top-left corner. */
 export interface FocalPoint {
   x: number;
   y: number;
-}
-
-export interface ImageMetadata {
-  width: number;
-  height: number;
-  /** width / height */
-  aspectRatio: number;
-}
-
-export interface RcsContent {
-  title: string;
-  description: string;
-  imageUrl: string | null;
-  imageMetadata?: ImageMetadata;
-  actions: RcsAction[];
-  focalPoint: FocalPoint;
-  cardFormat: CardFormat;
 }
 
 /**
@@ -171,9 +142,13 @@ export interface ImprovementChange {
 }
 
 export interface ImprovedRcsContent {
-  improvedContent: RcsContent;
+  improvedContent: StandaloneRichCard;
+  /** Derived media for the improved card (unchanged by the improver). */
+  improvedMedia?: MediaIntrospection;
+  /** Relocated focal point modelling the re-exported asset. */
+  improvedFocal: FocalPoint;
   /** Non-primary actions moved out of the card [xPlatform s11: a single CTA]. */
-  secondaryActions: RcsAction[];
+  secondaryActions: Suggestion[];
   changes: ImprovementChange[];
 }
 
