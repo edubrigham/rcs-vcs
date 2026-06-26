@@ -7,7 +7,9 @@ import {
   estimateLines,
   estimateTextLines,
   getPlatformRules,
+  GUIDE_MEDIA_HEIGHT_DP,
   IOS_RULES,
+  nearestGuideAspect,
   recommendedAspectForOrientation,
 } from "@/lib/rcsRules";
 import type { CardOrientation, MediaHeight } from "@/types/rcs";
@@ -97,6 +99,13 @@ describe("getPlatformRules — orientation + mediaHeight (key playbook facts)", 
     expect(recommendedAspectForOrientation("HORIZONTAL", null)).toMatchObject({ aspect: 9 / 16, label: "9:16" });
     expect(recommendedAspectForOrientation("VERTICAL", "MEDIUM")).toMatchObject({ aspect: 21 / 9, label: "21:9" });
     expect(recommendedAspectForOrientation("VERTICAL", "TALL")).toMatchObject({ aspect: 3 / 2, label: "3:2" });
+  });
+
+  it("uses the guide canonical heights + nearest-of-set aspect", () => {
+    expect(GUIDE_MEDIA_HEIGHT_DP).toEqual({ SHORT: 112, MEDIUM: 168, TALL: 264 });
+    expect(nearestGuideAspect(1.78).ratio).toBeCloseTo(16 / 9, 2);
+    expect(nearestGuideAspect(2.0).ratio).toBe(2);
+    expect(nearestGuideAspect(2.33).ratio).toBeCloseTo(7 / 3, 2);
   });
 });
 

@@ -21,8 +21,10 @@ import {
 import {
   androidCropWindow,
   estimateTextLines,
+  FUNCTIONAL_LIMITS,
   getPlatformRules,
   IOS_RULES,
+  nearestGuideAspect,
   RATIO_DEVIATION_TOLERANCE,
   recommendedAspectForOrientation,
   SAFE_ZONE_RULES,
@@ -204,6 +206,26 @@ export function scoreImage(
   let imageScoreIos = 100;
   let imageScoreAndroid = 100;
 
+  // File-level checks apply to any media (image or video, dimensions or not).
+  if (media && media.fileSizeBytes > FUNCTIONAL_LIMITS.FILE_MAX_BYTES) {
+    warnings.push({
+      severity: "info",
+      platform: "both",
+      category: "image",
+      message: `Media file is over ${FUNCTIONAL_LIMITS.FILE_MAX_BYTES / 1_000_000} MB (the recommended maximum).`,
+      recommendation: "Compress the asset below 100 MB (Naxai sendRCS).",
+    });
+  }
+  if (media?.mimeType === "image/gif") {
+    warnings.push({
+      severity: "info",
+      platform: "ios",
+      category: "image",
+      message: "Animated GIFs do not animate on iOS — only the first frame is shown.",
+      recommendation: "Use a short video if motion matters (xPlatform Playbook s11).",
+    });
+  }
+
   const hasImage = card.cardContent.media != null && media != null && media.aspectRatio != null;
   if (!hasImage) {
     imageScoreIos = 55;
@@ -345,16 +367,30 @@ export function scoreImage(
     }
   }
 
-  // Recommended source ratio per orientation/height.
-  const rec = recommendedAspectForOrientation(orientation, mediaHeight);
-  if (Math.abs(aspect - rec.aspect) / rec.aspect > RATIO_DEVIATION_TOLERANCE) {
-    warnings.push({
-      severity: "info",
-      platform: "both",
-      category: "image",
-      message: `The uploaded image (${aspect.toFixed(2)}:1) deviates from the recommended ${rec.label} ratio for this format.`,
-      recommendation: `Export the asset at ${rec.label} (${rec.citation}).`,
-    });
+  // Recommended source ratio. VERTICAL → nearest of the guide set {2:1, 16:9,
+  // 7:3} (the guide doesn't bind a ratio to a height). HORIZONTAL → playbook 9:16.
+  if (orientation === "VERTICAL") {
+    const { ratio, deviation } = nearestGuideAspect(aspect);
+    if (deviation > RATIO_DEVIATION_TOLERANCE) {
+      warnings.push({
+        severity: "info",
+        platform: "both",
+        category: "image",
+        message: `The uploaded image (${aspect.toFixed(2)}:1) is far from the nearest recommended vertical ratio (${ratio.toFixed(2)}:1).`,
+        recommendation: "Export close to one of 2:1, 16:9 or 7:3 (RBM rich-cards).",
+      });
+    }
+  } else {
+    const rec = recommendedAspectForOrientation(orientation, mediaHeight);
+    if (Math.abs(aspect - rec.aspect) / rec.aspect > RATIO_DEVIATION_TOLERANCE) {
+      warnings.push({
+        severity: "info",
+        platform: "both",
+        category: "image",
+        message: `The uploaded image (${aspect.toFixed(2)}:1) deviates from the recommended ${rec.label} ratio for this format.`,
+        recommendation: `Export the asset at ${rec.label} (${rec.citation}).`,
+      });
+    }
   }
 
   return { ios: imageScoreIos, android: imageScoreAndroid, warnings, recommendations };

@@ -46,11 +46,12 @@ export const IOS_RULES = {
   extremeAspectAbove: 2.2,
   extremeAspectBelow: 0.5,
   /** Cap (DP) we apply to iOS vertical-card media height in the simulation. */
-  verticalMediaHeightCap: 240,
-  /** Format-specific vertical-card caps (DP): medium 21:9, tall 3:2. */
+  verticalMediaHeightCap: 264,
+  /** Canonical media heights (DP) — Google RBM guide: Short 112 / Medium 168 / Tall 264. */
   verticalFormatMediaHeightCap: {
-    medium: 132,
-    tall: 204,
+    short: 112,
+    medium: 168,
+    tall: 264,
   },
   /**
    * [xPlatform s23] iOS overflow full-text-page content caps: beyond these the
@@ -117,6 +118,24 @@ export const FUNCTIONAL_LIMITS = {
 /** Supported media MIME types — Google RBM rich-cards guide. */
 export const SUPPORTED_IMAGE_MIME = ["image/jpeg", "image/png", "image/gif"] as const;
 export const SUPPORTED_VIDEO_MIME = ["video/h263", "video/x-m4v", "video/mp4", "video/mpeg", "video/webm"] as const;
+
+/** Canonical vertical-card media heights (DP) — Google RBM rich-cards guide. */
+export const GUIDE_MEDIA_HEIGHT_DP = { SHORT: 112, MEDIUM: 168, TALL: 264 } as const;
+
+/**
+ * Recommended vertical-card aspect ratios — the Google RBM guide lists
+ * {2:1, 16:9, 7:3} for ANY vertical card and does NOT bind a ratio to a height,
+ * so we score deviation against the NEAREST of the set (never a per-height map).
+ */
+export const GUIDE_VERTICAL_ASPECTS = [2 / 1, 16 / 9, 7 / 3] as const;
+
+export function nearestGuideAspect(aspect: number): { ratio: number; deviation: number } {
+  let ratio: number = GUIDE_VERTICAL_ASPECTS[0];
+  for (const r of GUIDE_VERTICAL_ASPECTS) {
+    if (Math.abs(aspect - r) < Math.abs(aspect - ratio)) ratio = r;
+  }
+  return { ratio, deviation: Math.abs(aspect - ratio) / ratio };
+}
 
 export const SAFE_ZONE_RULES = {
   /**
@@ -245,9 +264,11 @@ export function getPlatformRules(
     // parameter selects the container family (MEDIUM 21:9 vs TALL 3:2),
     // so we apply distinct caps. Long text tightens the cap.
     const baseCap =
-      mediaHeight === "MEDIUM"
-        ? IOS_RULES.verticalFormatMediaHeightCap.medium
-        : IOS_RULES.verticalFormatMediaHeightCap.tall;
+      mediaHeight === "SHORT"
+        ? IOS_RULES.verticalFormatMediaHeightCap.short
+        : mediaHeight === "MEDIUM"
+          ? IOS_RULES.verticalFormatMediaHeightCap.medium
+          : IOS_RULES.verticalFormatMediaHeightCap.tall;
     const cap =
       severity === "low"
         ? baseCap
