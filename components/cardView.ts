@@ -10,7 +10,7 @@
  */
 
 import { DEFAULT_CARD, DEFAULT_FOCAL, DEFAULT_MEDIA } from "@/lib/sampleContent";
-import type { Action, FocalPoint, MediaHeight, MediaIntrospection, StandaloneRichCard, Suggestion } from "@/types/rcs";
+import type { Action, FocalPoint, MediaHeight, MediaIntrospection, MediaType, StandaloneRichCard, Suggestion } from "@/types/rcs";
 
 export type ViewActionType = "openUrl" | "dial" | "reply";
 export interface ViewAction { id: string; type: ViewActionType; label: string; value: string }
@@ -20,6 +20,8 @@ export interface CardView {
   description: string;
   imageUrl: string | null;
   imageMetadata?: { width: number; height: number; aspectRatio: number };
+  /** Present for fetched media so the shell can branch image vs video rendering. */
+  mediaType?: MediaType;
   actions: ViewAction[];
   focalPoint: FocalPoint;
   orientation: "HORIZONTAL" | "VERTICAL";
@@ -57,6 +59,7 @@ export function cardToView(
       media && media.width != null && media.height != null && media.aspectRatio != null
         ? { width: media.width, height: media.height, aspectRatio: media.aspectRatio }
         : undefined,
+    mediaType: media?.mediaType,
     actions: suggestionsToViews(card.cardContent.suggestions ?? []),
     focalPoint: focal,
     orientation: card.cardOrientation,
@@ -70,14 +73,16 @@ export function viewToParts(
 ): { card: StandaloneRichCard; media: MediaIntrospection | undefined; focal: FocalPoint } {
   const media: MediaIntrospection | undefined = view.imageMetadata
     ? {
-        mediaType: prevMedia?.mediaType ?? "image",
+        mediaType: view.mediaType ?? prevMedia?.mediaType ?? "image",
         mimeType: prevMedia?.mimeType ?? "image/*",
         fileSizeBytes: prevMedia?.fileSizeBytes ?? 0,
         width: view.imageMetadata.width,
         height: view.imageMetadata.height,
         aspectRatio: view.imageMetadata.aspectRatio,
       }
-    : undefined;
+    : view.imageUrl && prevMedia
+      ? prevMedia // video (or dimensionless media): keep the introspection intact
+      : undefined;
   const card: StandaloneRichCard = {
     type: "standaloneRichCard",
     cardOrientation: view.orientation,
