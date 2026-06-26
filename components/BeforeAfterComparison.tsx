@@ -30,14 +30,29 @@ interface BeforeAfterComparisonProps {
 
 /** Corner-badge content: "Original"/"Improved" + score (+ delta). */
 function CornerBadge({ label, value, delta }: { label: string; value: number; delta?: number }) {
+  const deltaText =
+    delta === undefined ? undefined : delta > 0 ? `+${delta}` : `${delta}`;
+
   return (
     <>
       <span className="font-semibold uppercase tracking-[0.1em] text-muted">{label}</span>
-      <span className={`font-bold ${scoreTone(value)}`}>{value}</span>
-      {delta !== undefined && delta !== 0 && (
-        <span className={delta > 0 ? "text-[var(--color-secondary)]" : "text-[var(--color-destructive)]"}>
-          {delta > 0 ? `▲+${delta}` : `▼${delta}`}
-        </span>
+      {delta === undefined ? (
+        <span className={`font-bold ${scoreTone(value)}`}>{value}</span>
+      ) : (
+        <>
+          <span
+            className={
+              delta > 0
+                ? "text-[var(--color-secondary)]"
+                : delta < 0
+                  ? "text-[var(--color-destructive)]"
+                  : "text-muted"
+            }
+          >
+            {deltaText}
+          </span>
+          <span className="font-bold text-faint"> ({value})</span>
+        </>
       )}
     </>
   );
