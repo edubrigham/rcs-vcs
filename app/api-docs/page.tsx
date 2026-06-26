@@ -20,7 +20,7 @@ export default function ApiDocsPage() {
       const SwaggerUIBundle = (mod.default ?? mod) as (options: Record<string, unknown>) => unknown;
       if (cancelled || !ref.current) return;
       SwaggerUIBundle({
-        url: "/api/openapi.json",
+        url: "/api/openapi",
         domNode: ref.current,
         deepLinking: true,
         tryItOutEnabled: true,

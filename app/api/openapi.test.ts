@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import spec from "@/docs/scoring-api.openapi.json";
-import { GET } from "@/app/api/openapi.json/route";
+import { GET } from "@/app/api/openapi/route";
 
 const paths = () => Object.keys((spec as { paths: Record<string, unknown> }).paths);
 
