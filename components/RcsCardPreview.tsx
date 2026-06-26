@@ -21,7 +21,8 @@ import {
   visibleAreaFraction,
   type VisibleWindow,
 } from "@/lib/cropMath";
-import { androidCropWindowByFormat as androidCropWindow, estimateTextLines, getPlatformRulesByFormat as getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
+import { cardFormatToOrientationHeight } from "@/lib/model/cardModel";
+import { androidCropWindow, estimateTextLines, getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
 import type {
   FocalPoint,
   OverlayToggles,
@@ -71,12 +72,13 @@ export default function RcsCardPreview({
   subjectPoint,
   secondaryActions = [],
 }: RcsCardPreviewProps) {
+  const { orientation, mediaHeight: mh } = cardFormatToOrientationHeight(content.cardFormat);
   const lines = estimateTextLines(
     content.title,
     content.description,
-    getPlatformRules(platform, content.cardFormat, 0),
+    getPlatformRules(platform, orientation, mh, 0),
   );
-  const rules = getPlatformRules(platform, content.cardFormat, lines.totalLines);
+  const rules = getPlatformRules(platform, orientation, mh, lines.totalLines);
   const aspect = content.imageMetadata?.aspectRatio;
 
   // iOS vertical cards keep the native aspect ratio up to a height cap
@@ -99,7 +101,7 @@ export default function RcsCardPreview({
     ? variant === "improved"
       ? subjectProminenceWindow(aspect, containerAspect, focalForCrop)
       : isAndroid
-        ? androidCropWindow(aspect, content.cardFormat, lines.totalLines)
+        ? androidCropWindow(aspect, orientation, mh, lines.totalLines)
         : getVisibleWindow(aspect, containerAspect)
     : null;
   const useExplicitWindow = !!window && (variant === "improved" || isAndroid);
@@ -189,6 +191,10 @@ export default function RcsCardPreview({
   const ctas = content.actions.filter((a) => a.type !== "reply");
   const replies = content.actions.filter((a) => a.type === "reply");
 
+  // Primary CTA = the first non-reply action by position (T5 model; no .primary flag).
+  const primaryCta = content.actions.find((a) => a.type !== "reply");
+  const isPrimary = (a: RcsAction) => primaryCta?.id === a.id && content.actions[0]?.id === a.id;
+
   // ─────────────────────────── iOS ───────────────────────────
   if (platform === "ios") {
     const collapsed = ctas.length > rules.maxVisibleActions;
@@ -248,7 +254,7 @@ export default function RcsCardPreview({
                     key={action.id}
                     className={`flex w-full items-center justify-center gap-1.5 py-2 text-[15px] text-[#007aff] ${
                       i > 0 ? "border-t border-black/10" : ""
-                    } ${action.primary ? "font-semibold" : "font-normal"}`}
+                    } ${isPrimary(action) ? "font-semibold" : "font-normal"}`}
                   >
                     <span className="text-[12px] opacity-70">{ACTION_GLYPH[action.type]}</span>
                     <span className="max-w-[200px] truncate">{action.label || "Action"}</span>
@@ -340,7 +346,7 @@ export default function RcsCardPreview({
               <button
                 key={action.id}
                 className={`max-w-full truncate rounded-full border px-3 py-1 text-[12px] font-medium ${
-                  action.primary
+                  isPrimary(action)
                     ? "border-[#0b57d0] bg-[#0b57d0] text-white"
                     : "border-[#c4c7c5] bg-white text-[#0b57d0]"
                 }`}
