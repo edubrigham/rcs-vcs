@@ -8,39 +8,80 @@
 
 export type Platform = "ios" | "android";
 
-export type CardFormat = "compact" | "medium" | "tall";
+// Naxai-aligned types
+export type CardOrientation = "HORIZONTAL" | "VERTICAL";
+export type MediaHeight = "SHORT" | "MEDIUM" | "TALL";
+export type MediaType = "image" | "video";
 
-export type RcsActionType = "openUrl" | "dial" | "reply";
+export interface ContentInfo {
+  fileUrl: string;
+  thumbnailUrl?: string;
+  forceRefresh?: boolean;
+}
+export interface Media {
+  height: MediaHeight;
+  contentInfo: ContentInfo;
+}
 
-export interface RcsAction {
-  id: string;
-  type: RcsActionType;
-  label: string;
-  value: string;
-  primary?: boolean;
+export type Action =
+  | { type: "openUrlAction"; url: string }
+  | { type: "dialAction"; phoneNumber: string }
+  | { type: "viewLocationAction"; latitude: number; longitude: number; label?: string }
+  | { type: "createCalendarEventAction"; startTime: string; endTime: string; title: string; description: string };
+export interface SuggestedReply {
+  type: "reply";
+  text: string;
+  postbackData?: string;
+}
+export interface SuggestedAction {
+  type: "action";
+  text: string;
+  postbackData?: string;
+  action: Action;
+}
+export type Suggestion = SuggestedReply | SuggestedAction;
+
+export interface CardContent {
+  title?: string;
+  description?: string;
+  media?: Media;
+  suggestions?: Suggestion[];
+}
+export interface StandaloneRichCard {
+  type: "standaloneRichCard";
+  cardOrientation: CardOrientation;
+  thumbnailImageAlignment?: "LEFT" | "RIGHT";
+  cardContent: CardContent;
+}
+
+/** A plain-text message [rcsContentBody.oneOf → messageText]. */
+export interface MessageText {
+  type: "text";
+  /** ≤ 2000 chars. */
+  text: string;
+}
+
+/**
+ * The RCS Broadcasts API `rcsContentBody` — the exact object the Simulator API
+ * receives as input. Discriminated union on `type`. The carousel arm
+ * (`CarouselRichCard`) lands in Spec 2.
+ */
+export type RcsContentBody = MessageText | StandaloneRichCard;
+
+export interface MediaIntrospection {
+  mediaType: MediaType;
+  mimeType: string;
+  fileSizeBytes: number;
+  thumbnailSizeBytes?: number;
+  width?: number; // image only
+  height?: number; // image only
+  aspectRatio?: number; // image only
 }
 
 /** Normalized image coordinates: { x: 0..1, y: 0..1 } from the top-left corner. */
 export interface FocalPoint {
   x: number;
   y: number;
-}
-
-export interface ImageMetadata {
-  width: number;
-  height: number;
-  /** width / height */
-  aspectRatio: number;
-}
-
-export interface RcsContent {
-  title: string;
-  description: string;
-  imageUrl: string | null;
-  imageMetadata?: ImageMetadata;
-  actions: RcsAction[];
-  focalPoint: FocalPoint;
-  cardFormat: CardFormat;
 }
 
 /**
@@ -101,9 +142,13 @@ export interface ImprovementChange {
 }
 
 export interface ImprovedRcsContent {
-  improvedContent: RcsContent;
+  improvedContent: StandaloneRichCard;
+  /** Derived media for the improved card (unchanged by the improver). */
+  improvedMedia?: MediaIntrospection;
+  /** Relocated focal point modelling the re-exported asset. */
+  improvedFocal: FocalPoint;
   /** Non-primary actions moved out of the card [xPlatform s11: a single CTA]. */
-  secondaryActions: RcsAction[];
+  secondaryActions: Suggestion[];
   changes: ImprovementChange[];
 }
 
@@ -111,4 +156,28 @@ export interface OverlayToggles {
   showSafeZone: boolean;
   showCropArea: boolean;
   showTextLineLimits: boolean;
+}
+
+// ── Functional compliance (the API's hard limits — a 422 if exceeded) ──
+export type FunctionalLimitId =
+  | "mediaType"
+  | "titleLength"
+  | "descriptionLength"
+  | "suggestionCount"
+  | "labelLength"
+  | "thumbnailSize"
+  | "openUrlLength"
+  | "emptyCard";
+
+export interface FunctionalViolation {
+  limit: FunctionalLimitId;
+  message: string;
+  actual: string | number;
+  max?: string | number;
+  citation: string;
+}
+
+export interface FunctionalResult {
+  passes: boolean;
+  violations: FunctionalViolation[];
 }

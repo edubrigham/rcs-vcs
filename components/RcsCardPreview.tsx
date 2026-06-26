@@ -22,18 +22,13 @@ import {
   type VisibleWindow,
 } from "@/lib/cropMath";
 import { androidCropWindow, estimateTextLines, getPlatformRules, IOS_RULES } from "@/lib/rcsRules";
-import type {
-  FocalPoint,
-  OverlayToggles,
-  Platform,
-  RcsAction,
-  RcsContent,
-} from "@/types/rcs";
+import type { CardView, ViewAction } from "@/components/cardView";
+import type { FocalPoint, OverlayToggles, Platform } from "@/types/rcs";
 import SafeZoneOverlay from "@/components/SafeZoneOverlay";
 import InlineSlideCitation from "@/components/InlineSlideCitation";
 
 interface RcsCardPreviewProps {
-  content: RcsContent;
+  content: CardView;
   platform: Platform;
   toggles: OverlayToggles;
   /** "improved" simulates a re-cropped asset zoomed onto the subject. */
@@ -45,7 +40,7 @@ interface RcsCardPreviewProps {
    */
   subjectPoint?: FocalPoint;
   /** Actions moved out of the card by the improver (shown as a footnote). */
-  secondaryActions?: RcsAction[];
+  secondaryActions?: ViewAction[];
 }
 
 function clampStyle(lines: number): CSSProperties {
@@ -57,7 +52,7 @@ function clampStyle(lines: number): CSSProperties {
   };
 }
 
-const ACTION_GLYPH: Record<RcsAction["type"], string> = {
+const ACTION_GLYPH: Record<ViewAction["type"], string> = {
   openUrl: "↗",
   dial: "✆",
   reply: "↩",
@@ -71,12 +66,14 @@ export default function RcsCardPreview({
   subjectPoint,
   secondaryActions = [],
 }: RcsCardPreviewProps) {
+  const orientation = content.orientation;
+  const mh = content.orientation === "HORIZONTAL" ? null : content.height;
   const lines = estimateTextLines(
     content.title,
     content.description,
-    getPlatformRules(platform, content.cardFormat, 0),
+    getPlatformRules(platform, orientation, mh, 0),
   );
-  const rules = getPlatformRules(platform, content.cardFormat, lines.totalLines);
+  const rules = getPlatformRules(platform, orientation, mh, lines.totalLines);
   const aspect = content.imageMetadata?.aspectRatio;
 
   // iOS vertical cards keep the native aspect ratio up to a height cap
@@ -99,7 +96,7 @@ export default function RcsCardPreview({
     ? variant === "improved"
       ? subjectProminenceWindow(aspect, containerAspect, focalForCrop)
       : isAndroid
-        ? androidCropWindow(aspect, content.cardFormat, lines.totalLines)
+        ? androidCropWindow(aspect, orientation, mh, lines.totalLines)
         : getVisibleWindow(aspect, containerAspect)
     : null;
   const useExplicitWindow = !!window && (variant === "improved" || isAndroid);
@@ -142,7 +139,7 @@ export default function RcsCardPreview({
           window={window}
           imageAspect={aspect}
           showSafeZone={toggles.showSafeZone}
-          showCriticalSquare={content.cardFormat === "compact"}
+          showCriticalSquare={content.orientation === "HORIZONTAL"}
           focal={focalForCrop}
           minimal={mediaWidth < 100 || mediaHeight < 100}
         />
@@ -188,6 +185,10 @@ export default function RcsCardPreview({
   // all card suggestions as chips inside the card.
   const ctas = content.actions.filter((a) => a.type !== "reply");
   const replies = content.actions.filter((a) => a.type === "reply");
+
+  // Primary CTA = the first non-reply action by position (T5 model; no .primary flag).
+  const primaryCta = content.actions.find((a) => a.type !== "reply");
+  const isPrimary = (a: ViewAction) => primaryCta?.id === a.id && content.actions[0]?.id === a.id;
 
   // ─────────────────────────── iOS ───────────────────────────
   if (platform === "ios") {
@@ -248,7 +249,7 @@ export default function RcsCardPreview({
                     key={action.id}
                     className={`flex w-full items-center justify-center gap-1.5 py-2 text-[15px] text-[#007aff] ${
                       i > 0 ? "border-t border-black/10" : ""
-                    } ${action.primary ? "font-semibold" : "font-normal"}`}
+                    } ${isPrimary(action) ? "font-semibold" : "font-normal"}`}
                   >
                     <span className="text-[12px] opacity-70">{ACTION_GLYPH[action.type]}</span>
                     <span className="max-w-[200px] truncate">{action.label || "Action"}</span>
@@ -340,7 +341,7 @@ export default function RcsCardPreview({
               <button
                 key={action.id}
                 className={`max-w-full truncate rounded-full border px-3 py-1 text-[12px] font-medium ${
-                  action.primary
+                  isPrimary(action)
                     ? "border-[#0b57d0] bg-[#0b57d0] text-white"
                     : "border-[#c4c7c5] bg-white text-[#0b57d0]"
                 }`}

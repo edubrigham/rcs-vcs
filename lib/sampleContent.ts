@@ -3,15 +3,18 @@
  * long texts (truncation + crop severity) and a product placed top-right,
  * outside the safe zone (focal-point warnings) — the exact failure modes the
  * playbooks warn about.
+ *
+ * Native Naxai model: a `StandaloneRichCard` (the `rcsContentBody` arm) plus the
+ * derived `MediaIntrospection` and the simulator-only `FocalPoint`.
  */
 
-import type { RcsContent } from "@/types/rcs";
+import type { FocalPoint, MediaIntrospection, StandaloneRichCard } from "@/types/rcs";
 
 const SAMPLE_W = 800;
 const SAMPLE_H = 1000;
 
 /** The demo product is intentionally drawn top-right, outside the safe zone. */
-export const SAMPLE_FOCAL = { x: 0.82, y: 0.18 };
+export const DEFAULT_FOCAL: FocalPoint = { x: 0.82, y: 0.18 };
 
 const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="${SAMPLE_W}" height="${SAMPLE_H}" viewBox="0 0 ${SAMPLE_W} ${SAMPLE_H}">
@@ -52,21 +55,29 @@ const svg = `
 
 export const SAMPLE_IMAGE_URL = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
-export const DEFAULT_CONTENT: RcsContent = {
-  title: "Pulse Ultra Smartwatch — Pre-order today and save 20% with free engraving",
-  description:
-    "Meet the next generation of health tracking with a 10-day battery, on-wrist ECG and sleep coaching powered by your own data. Pre-order before Sunday and we will include free delivery, setup support and a second strap of your choice.",
-  imageUrl: SAMPLE_IMAGE_URL,
-  imageMetadata: {
-    width: SAMPLE_W,
-    height: SAMPLE_H,
-    aspectRatio: SAMPLE_W / SAMPLE_H,
+/** Derived media info the production API would compute by fetching the file. */
+export const DEFAULT_MEDIA: MediaIntrospection = {
+  mediaType: "image",
+  mimeType: "image/svg+xml",
+  fileSizeBytes: 0,
+  width: SAMPLE_W,
+  height: SAMPLE_H,
+  aspectRatio: SAMPLE_W / SAMPLE_H,
+};
+
+/** The default card — a HORIZONTAL standalone rich card (legacy "compact"). */
+export const DEFAULT_CARD: StandaloneRichCard = {
+  type: "standaloneRichCard",
+  cardOrientation: "HORIZONTAL",
+  cardContent: {
+    title: "Pulse Ultra Smartwatch — Pre-order today and save 20% with free engraving",
+    description:
+      "Meet the next generation of health tracking with a 10-day battery, on-wrist ECG and sleep coaching powered by your own data. Pre-order before Sunday and we will include free delivery, setup support and a second strap of your choice.",
+    media: { height: "TALL", contentInfo: { fileUrl: SAMPLE_IMAGE_URL } },
+    suggestions: [
+      { type: "action", text: "Pre-order now", action: { type: "openUrlAction", url: "https://naxai.example/pulse-ultra" } },
+      { type: "action", text: "Call a store advisor for details", action: { type: "dialAction", phoneNumber: "+3225550123" } },
+      { type: "reply", text: "Send me more info", postbackData: "MORE_INFO" },
+    ],
   },
-  actions: [
-    { id: "a1", type: "openUrl", label: "Pre-order now", value: "https://naxai.example/pulse-ultra", primary: true },
-    { id: "a2", type: "dial", label: "Call a store advisor for details", value: "+3225550123" },
-    { id: "a3", type: "reply", label: "Send me more info", value: "MORE_INFO" },
-  ],
-  focalPoint: SAMPLE_FOCAL,
-  cardFormat: "compact",
 };

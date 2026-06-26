@@ -1,35 +1,63 @@
 /**
  * Faithfulness regression suite — locks the bug fixes and gap closures from the
- * multi-agent playbook audit, plus boundary cases for previously-untested rules.
+ * playbook audit, plus boundary cases for previously-untested rules. Native model.
  */
 import { describe, expect, it } from "vitest";
 import { applyVerticalCrop, criticalSquareWindow, getVisibleWindow } from "@/lib/cropMath";
 import { citationsFromLabels, parseRecommendationCitations } from "@/lib/recommendationCitations";
 import { scoreActions, scoreImage, scoreLayout, scoreText } from "@/lib/scoreRcsContent";
-import type { RcsContent } from "@/types/rcs";
+import type { FocalPoint, MediaIntrospection, StandaloneRichCard, Suggestion } from "@/types/rcs";
 
-const CLEAN: RcsContent = {
-  title: "Galaxy S26 Ultra",
-  description: "Free delivery and setup.",
-  imageUrl: "x",
-  imageMetadata: { width: 1620, height: 1080, aspectRatio: 1620 / 1080 },
-  actions: [{ id: "a", type: "openUrl", label: "View product", value: "https://x.example", primary: true }],
-  focalPoint: { x: 0.5, y: 0.5 },
-  cardFormat: "tall",
+const CLEAN: StandaloneRichCard = {
+  type: "standaloneRichCard",
+  cardOrientation: "VERTICAL",
+  cardContent: {
+    title: "Galaxy S26 Ultra",
+    description: "Free delivery and setup.",
+    media: { height: "TALL", contentInfo: { fileUrl: "x" } },
+    suggestions: [{ type: "action", text: "View product", action: { type: "openUrlAction", url: "https://x.example" } }],
+  },
 };
+const CLEAN_MEDIA: MediaIntrospection = {
+  mediaType: "image",
+  mimeType: "image/png",
+  fileSizeBytes: 0,
+  width: 1620,
+  height: 1080,
+  aspectRatio: 1620 / 1080,
+};
+const CLEAN_FOCAL: FocalPoint = { x: 0.5, y: 0.5 };
+
+function media(aspectRatio: number, width: number, height: number): MediaIntrospection {
+  return { mediaType: "image", mimeType: "image/png", fileSizeBytes: 0, width, height, aspectRatio };
+}
+/** CLEAN with overridden text + orientation/height. */
+function textCard(over: Partial<{ title: string; description: string; orientation: "HORIZONTAL" | "VERTICAL"; height: "SHORT" | "MEDIUM" | "TALL" }>): StandaloneRichCard {
+  return {
+    ...CLEAN,
+    cardOrientation: over.orientation ?? CLEAN.cardOrientation,
+    cardContent: {
+      ...CLEAN.cardContent,
+      title: over.title ?? CLEAN.cardContent.title,
+      description: over.description ?? CLEAN.cardContent.description,
+      media: { height: over.height ?? "TALL", contentInfo: { fileUrl: "x" } },
+    },
+  };
+}
+/** CLEAN with the given suggestions. */
+function acts(...suggestions: Suggestion[]): StandaloneRichCard {
+  return { ...CLEAN, cardContent: { ...CLEAN.cardContent, suggestions } };
+}
 
 // ───────────────── BUG-5: s11 is cross-platform, not iOS-only ─────────────────
 describe("s11 3-line recommendation checks BOTH platforms (BUG-5)", () => {
-  // Keep the image (centered, in-spec) so the only layout penalty isolated here
-  // is the −10 for the Android-only 3-line breach.
-  const content: RcsContent = {
-    ...CLEAN,
+  const card = textCard({
     title: "Spring Sale",
     description: "Save twenty percent on all our newest phones today",
-    cardFormat: "compact",
-  };
+    orientation: "HORIZONTAL",
+  });
   it("fires when Android wraps past 3 lines even though iOS stays at 3", () => {
-    const r = scoreText(content);
+    const r = scoreText(card);
     expect(
       r.warnings.some(
         (w) => w.platform === "both" && w.category === "text" && /recommended 3 lines/.test(w.message),
@@ -37,57 +65,44 @@ describe("s11 3-line recommendation checks BOTH platforms (BUG-5)", () => {
     ).toBe(true);
   });
   it("docks the layout score by 10 for the same Android-only breach", () => {
-    expect(scoreLayout(content).score).toBe(90);
+    expect(scoreLayout(card).score).toBe(90);
   });
 });
 
 // ───────────────── GAP-2: iOS overflow 200/2000 char caps ─────────────────
 describe("iOS full-text-page caps 200/2000 (GAP-2)", () => {
   it("warns when title>200 or description>2000, distinct from the 6-line critical", () => {
-    const r = scoreText({
-      ...CLEAN,
-      title: "x".repeat(250),
-      description: "y".repeat(2500),
-      cardFormat: "tall",
-    });
+    const r = scoreText(textCard({ title: "x".repeat(250), description: "y".repeat(2500), height: "TALL" }));
     expect(r.warnings.some((w) => /200/.test(w.message))).toBe(true);
     expect(r.warnings.some((w) => /2000/.test(w.message))).toBe(true);
   });
   it("does not fire at or below the caps", () => {
-    const r = scoreText({ ...CLEAN, title: "x".repeat(200), description: "y".repeat(2000) });
+    const r = scoreText(textCard({ title: "x".repeat(200), description: "y".repeat(2000) }));
     expect(r.warnings.some((w) => /200-character|2000-character/.test(w.message))).toBe(false);
   });
 });
 
 // ───────────────── GAP-1: action-before-replies (s21) ─────────────────
 describe("action-after-reply ordering is penalised (GAP-1, s21)", () => {
-  const replyFirst: RcsContent = {
-    ...CLEAN,
-    actions: [
-      { id: "r", type: "reply", label: "Maybe later", value: "LATER" },
-      { id: "a", type: "openUrl", label: "Buy now", value: "https://x", primary: true },
-    ],
-  };
+  const replyFirst = acts(
+    { type: "reply", text: "Maybe later", postbackData: "LATER" },
+    { type: "action", text: "Buy now", action: { type: "openUrlAction", url: "https://x" } },
+  );
   it("warns and penalises iOS when an action sits after a reply", () => {
     const r = scoreActions(replyFirst);
     expect(r.warnings.some((w) => /s21/.test(w.recommendation ?? ""))).toBe(true);
     expect(r.ios).toBeLessThan(100);
   });
   it("action-first scores higher than reply-first (delta is visible)", () => {
-    const actionFirst: RcsContent = {
-      ...replyFirst,
-      actions: [replyFirst.actions[1], replyFirst.actions[0]],
-    };
+    const s = replyFirst.cardContent.suggestions!;
+    const actionFirst = acts(s[1], s[0]);
     expect(scoreActions(actionFirst).ios).toBeGreaterThan(scoreActions(replyFirst).ios);
   });
 });
 
 // ───────────────── https check is case-insensitive ─────────────────
 describe("openUrl https check (RFC 3986 case-insensitive)", () => {
-  const withUrl = (value: string): RcsContent => ({
-    ...CLEAN,
-    actions: [{ id: "a", type: "openUrl", label: "Go", value, primary: true }],
-  });
+  const withUrl = (url: string) => acts({ type: "action", text: "Go", action: { type: "openUrlAction", url } });
   it("flags http:// but not HTTPS://", () => {
     expect(scoreActions(withUrl("http://x")).warnings.some((w) => /https/.test(w.message))).toBe(true);
     expect(scoreActions(withUrl("HTTPS://x")).warnings.some((w) => /https/.test(w.message))).toBe(false);
@@ -96,36 +111,30 @@ describe("openUrl https check (RFC 3986 case-insensitive)", () => {
 
 // ───────────────── suggestion boundaries (s17/s42) ─────────────────
 describe("suggestion boundaries", () => {
-  const acts = (...a: RcsContent["actions"]): RcsContent => ({ ...CLEAN, actions: a });
   it("2 CTAs → no iOS dropdown; 3 CTAs → dropdown", () => {
     const two = acts(
-      { id: "1", type: "openUrl", label: "Buy", value: "https://x", primary: true },
-      { id: "2", type: "dial", label: "Call", value: "+3220000000" },
+      { type: "action", text: "Buy", action: { type: "openUrlAction", url: "https://x" } },
+      { type: "action", text: "Call", action: { type: "dialAction", phoneNumber: "+3220000000" } },
     );
     const three = acts(
-      { id: "1", type: "openUrl", label: "Buy", value: "https://x", primary: true },
-      { id: "2", type: "dial", label: "Call", value: "+3220000000" },
-      { id: "3", type: "openUrl", label: "More", value: "https://x/m" },
+      { type: "action", text: "Buy", action: { type: "openUrlAction", url: "https://x" } },
+      { type: "action", text: "Call", action: { type: "dialAction", phoneNumber: "+3220000000" } },
+      { type: "action", text: "More", action: { type: "openUrlAction", url: "https://x/m" } },
     );
     expect(scoreActions(two).warnings.some((w) => /dropdown/.test(w.message))).toBe(false);
     expect(scoreActions(three).warnings.some((w) => /dropdown/.test(w.message))).toBe(true);
   });
   it("25-char label OK, 26 flagged", () => {
-    const ok = acts({ id: "1", type: "openUrl", label: "x".repeat(25), value: "https://x", primary: true });
-    const bad = acts({ id: "1", type: "openUrl", label: "x".repeat(26), value: "https://x", primary: true });
+    const ok = acts({ type: "action", text: "x".repeat(25), action: { type: "openUrlAction", url: "https://x" } });
+    const bad = acts({ type: "action", text: "x".repeat(26), action: { type: "openUrlAction", url: "https://x" } });
     expect(scoreActions(ok).warnings.some((w) => /25-character/.test(w.message))).toBe(false);
     expect(scoreActions(bad).warnings.some((w) => /25-character/.test(w.message))).toBe(true);
   });
   it("1 action + 3 replies = clean; + 4 replies = reply-cap + 4-total criticals", () => {
     const mk = (n: number) =>
       acts(
-        { id: "a", type: "openUrl", label: "Buy", value: "https://x", primary: true },
-        ...Array.from({ length: n }, (_, i) => ({
-          id: `r${i}`,
-          type: "reply" as const,
-          label: `R${i}`,
-          value: `R${i}`,
-        })),
+        { type: "action", text: "Buy", action: { type: "openUrlAction", url: "https://x" } },
+        ...Array.from({ length: n }, (_, i): Suggestion => ({ type: "reply", text: `R${i}`, postbackData: `R${i}` })),
       );
     expect(scoreActions(mk(3)).warnings).toHaveLength(0);
     const four = scoreActions(mk(4));
@@ -137,30 +146,15 @@ describe("suggestion boundaries", () => {
 // ───────────────── scoreImage penalties (s16, p28, p39) ─────────────────
 describe("scoreImage penalties", () => {
   it("compact focal outside the 1:1 square AND safe zone → iOS 50 (−35 −15)", () => {
-    const r = scoreImage({
-      ...CLEAN,
-      cardFormat: "compact",
-      imageMetadata: { width: 900, height: 1600, aspectRatio: 0.5625 },
-      focalPoint: { x: 0.5, y: 0.05 },
-    });
+    const r = scoreImage(textCard({ orientation: "HORIZONTAL" }), media(0.5625, 900, 1600), { x: 0.5, y: 0.05 });
     expect(r.ios).toBe(50);
   });
   it("vertical extreme aspect → iOS −25 = 75", () => {
-    const r = scoreImage({
-      ...CLEAN,
-      cardFormat: "tall",
-      imageMetadata: { width: 3000, height: 1000, aspectRatio: 3 },
-      focalPoint: { x: 0.5, y: 0.5 },
-    });
+    const r = scoreImage(textCard({ height: "TALL" }), media(3, 3000, 1000), { x: 0.5, y: 0.5 });
     expect(r.ios).toBe(75);
   });
   it("vertical focal outside safe zone → iOS −20 = 80", () => {
-    const r = scoreImage({
-      ...CLEAN,
-      cardFormat: "tall",
-      imageMetadata: { width: 1620, height: 1080, aspectRatio: 1.5 },
-      focalPoint: { x: 0.5, y: 0.92 },
-    });
+    const r = scoreImage(textCard({ height: "TALL" }), media(1.5, 1620, 1080), { x: 0.5, y: 0.92 });
     expect(r.ios).toBe(80);
   });
 });

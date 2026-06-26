@@ -19,7 +19,7 @@
  */
 
 import { applyVerticalCrop, getVisibleWindow, type VisibleWindow } from "@/lib/cropMath";
-import type { CardFormat, Platform, PlatformRenderRules } from "@/types/rcs";
+import type { CardOrientation, MediaHeight, Platform, PlatformRenderRules } from "@/types/rcs";
 
 export const IOS_RULES = {
   /** [xPlatform s15] "iOS renders the media at 60x60 DP." (Horizontal Rich Card) */
@@ -46,11 +46,12 @@ export const IOS_RULES = {
   extremeAspectAbove: 2.2,
   extremeAspectBelow: 0.5,
   /** Cap (DP) we apply to iOS vertical-card media height in the simulation. */
-  verticalMediaHeightCap: 240,
-  /** Format-specific vertical-card caps (DP): medium 21:9, tall 3:2. */
+  verticalMediaHeightCap: 264,
+  /** Canonical media heights (DP) — Google RBM guide: Short 112 / Medium 168 / Tall 264. */
   verticalFormatMediaHeightCap: {
-    medium: 132,
-    tall: 204,
+    short: 112,
+    medium: 168,
+    tall: 264,
   },
   /**
    * [xPlatform s23] iOS overflow full-text-page content caps: beyond these the
@@ -99,6 +100,42 @@ export const SUGGESTION_RULES = {
   /** [xPlatform s11] "A single CTA (suggested action)" is the recommended pattern. */
   recommendedCtaCount: 1,
 } as const;
+
+/**
+ * Functional hard limits — authoritative source is the Naxai sendRCS OpenAPI
+ * (`docs/rcs-broadcasts.yaml`); exceed one and the API returns `422`.
+ */
+export const FUNCTIONAL_LIMITS = {
+  TITLE_MAX: 200,
+  DESCRIPTION_MAX: 2000,
+  SUGGESTION_MAX: 4,
+  LABEL_MAX: 25,
+  THUMBNAIL_MAX_BYTES: 100_000,
+  OPEN_URL_MAX: 2048,
+  FILE_MAX_BYTES: 100_000_000,
+} as const;
+
+/** Supported media MIME types — Google RBM rich-cards guide. */
+export const SUPPORTED_IMAGE_MIME = ["image/jpeg", "image/png", "image/gif"] as const;
+export const SUPPORTED_VIDEO_MIME = ["video/h263", "video/x-m4v", "video/mp4", "video/mpeg", "video/webm"] as const;
+
+/** Canonical vertical-card media heights (DP) — Google RBM rich-cards guide. */
+export const GUIDE_MEDIA_HEIGHT_DP = { SHORT: 112, MEDIUM: 168, TALL: 264 } as const;
+
+/**
+ * Recommended vertical-card aspect ratios — the Google RBM guide lists
+ * {2:1, 16:9, 7:3} for ANY vertical card and does NOT bind a ratio to a height,
+ * so we score deviation against the NEAREST of the set (never a per-height map).
+ */
+export const GUIDE_VERTICAL_ASPECTS = [2 / 1, 16 / 9, 7 / 3] as const;
+
+export function nearestGuideAspect(aspect: number): { ratio: number; deviation: number } {
+  let ratio: number = GUIDE_VERTICAL_ASPECTS[0];
+  for (const r of GUIDE_VERTICAL_ASPECTS) {
+    if (Math.abs(aspect - r) < Math.abs(aspect - ratio)) ratio = r;
+  }
+  return { ratio, deviation: Math.abs(aspect - ratio) / ratio };
+}
 
 export const SAFE_ZONE_RULES = {
   /**
@@ -190,18 +227,25 @@ const ANDROID_VERTICAL_CROP_KEEP: Record<"low" | "medium" | "high", number> = {
 };
 
 /**
- * Resolves the render rules for a platform + card format + current text.
- * `totalTextLines` should come from `estimateTextLines` for the same platform.
+ * Resolves the render rules for a platform + card orientation + media height +
+ * current text. `totalTextLines` should come from `estimateTextLines` for the
+ * same platform.
+ *
+ * Orientation × mediaHeight cells:
+ *  - HORIZONTAL + null  → Horizontal Rich Card (formerly "compact")
+ *  - VERTICAL + MEDIUM  → Vertical Rich Card, medium container (21:9)
+ *  - VERTICAL + TALL    → Vertical Rich Card, tall container   (3:2)
  */
 export function getPlatformRules(
   platform: Platform,
-  cardFormat: CardFormat,
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
   totalTextLines: number,
 ): PlatformRenderRules {
   const severity = cropSeverityForLines(totalTextLines);
 
   if (platform === "ios") {
-    if (cardFormat === "compact") {
+    if (orientation === "HORIZONTAL") {
       // [xPlatform s15] Horizontal Rich Card on iOS: 60x60 DP thumbnail.
       return {
         mediaWidth: IOS_RULES.compactMediaSizeDp,
@@ -216,13 +260,15 @@ export function getPlatformRules(
         descriptionCharsPerLine: 30,
       };
     }
-    // [CardMedia p28] iOS vertical cards keep native aspect; format selection
-    // still changes the vertical container family (medium 21:9 vs tall 3:2),
-    // so we apply distinct caps per format. Long text tightens the cap.
+    // [CardMedia p28] iOS vertical cards keep native aspect; the height
+    // parameter selects the container family (MEDIUM 21:9 vs TALL 3:2),
+    // so we apply distinct caps. Long text tightens the cap.
     const baseCap =
-      cardFormat === "medium"
-        ? IOS_RULES.verticalFormatMediaHeightCap.medium
-        : IOS_RULES.verticalFormatMediaHeightCap.tall;
+      mediaHeight === "SHORT"
+        ? IOS_RULES.verticalFormatMediaHeightCap.short
+        : mediaHeight === "MEDIUM"
+          ? IOS_RULES.verticalFormatMediaHeightCap.medium
+          : IOS_RULES.verticalFormatMediaHeightCap.tall;
     const cap =
       severity === "low"
         ? baseCap
@@ -242,10 +288,10 @@ export function getPlatformRules(
   }
 
   // ─── Android ───
-  // Media box size is FIXED per format (independent of text); "more crop with
-  // longer text" is modelled by androidCropWindow's vertical punch-in, not by
-  // shrinking the box (which made the crop axis flip — see ANDROID_VERTICAL_CROP_KEEP).
-  if (cardFormat === "compact") {
+  // Media box size is FIXED per orientation/height (independent of text);
+  // "more crop with longer text" is modelled by androidCropWindow's vertical
+  // punch-in, not by shrinking the box (see ANDROID_VERTICAL_CROP_KEEP).
+  if (orientation === "HORIZONTAL") {
     // [CardMedia p13] fixed 128dp media width.
     return {
       mediaWidth: ANDROID_RULES.horizontalCardMediaWidthDp,
@@ -262,7 +308,7 @@ export function getPlatformRules(
   }
 
   const containerAspect =
-    cardFormat === "medium"
+    mediaHeight === "MEDIUM"
       ? ANDROID_RULES.verticalContainerAspect.medium // 21:9 [CardMedia p8]
       : ANDROID_RULES.verticalContainerAspect.tall; // 3:2  [CardMedia p8]
   return {
@@ -281,34 +327,38 @@ export function getPlatformRules(
 
 /**
  * The part of the source image visible inside the Android media container for a
- * given format and text length: the fixed-container cover crop, then a centred
- * vertical punch-in that grows with text severity [xPlatform s15]. Guaranteed
- * monotonic: more text → never more visible area. Shared by the scorer and the
- * preview so "what we score" and "what we draw" cannot diverge.
+ * given orientation+mediaHeight and text length: the fixed-container cover crop,
+ * then a centred vertical punch-in that grows with text severity [xPlatform s15].
+ * Guaranteed monotonic: more text → never more visible area. Shared by the
+ * scorer and the preview so "what we score" and "what we draw" cannot diverge.
  */
 export function androidCropWindow(
   imageAspect: number,
-  cardFormat: CardFormat,
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
   totalTextLines: number,
 ): VisibleWindow {
-  const rules = getPlatformRules("android", cardFormat, totalTextLines);
+  const rules = getPlatformRules("android", orientation, mediaHeight, totalTextLines);
   const base = getVisibleWindow(imageAspect, rules.mediaWidth / rules.mediaHeight);
   return applyVerticalCrop(base, ANDROID_VERTICAL_CROP_KEEP[rules.cropSeverity]);
 }
 
-/** Recommended source-asset aspect ratio per format [xPlatform s12/s16, CardMedia p8]. */
-export function recommendedAspectForFormat(cardFormat: CardFormat): {
+/** Recommended source-asset aspect ratio per orientation+mediaHeight [xPlatform s12/s16, CardMedia p8]. */
+export function recommendedAspectForOrientation(
+  orientation: CardOrientation,
+  mediaHeight: MediaHeight | null,
+): {
   aspect: number;
   label: string;
   citation: string;
 } {
-  switch (cardFormat) {
-    case "compact":
-      return { aspect: 9 / 16, label: "9:16", citation: "xPlatform Playbook s15-s16" };
-    case "medium":
-      return { aspect: 21 / 9, label: "21:9", citation: "Card Media Playbook p8" };
-    case "tall":
-      // Comma-separated so the citation parser splits the two sources.
-      return { aspect: 3 / 2, label: "3:2", citation: "Card Media Playbook p8, xPlatform s12" };
+  if (orientation === "HORIZONTAL") {
+    return { aspect: 9 / 16, label: "9:16", citation: "xPlatform Playbook s15-s16" };
   }
+  if (mediaHeight === "MEDIUM") {
+    return { aspect: 21 / 9, label: "21:9", citation: "Card Media Playbook p8" };
+  }
+  // VERTICAL + TALL (default for vertical)
+  // Comma-separated so the citation parser splits the two sources.
+  return { aspect: 3 / 2, label: "3:2", citation: "Card Media Playbook p8, xPlatform s12" };
 }

@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * Shared simulator state: the authored card content plus view options, used by
- * both the editor (/) and the improvement studio (/improve).
+ * Shared simulator state: the native Naxai card (`StandaloneRichCard`), its
+ * derived `MediaIntrospection`, and the simulator-only `FocalPoint`, plus view
+ * options. Used by both the editor (/) and the improvement studio (/improve).
  *
  * State survives client-side navigation via React context and hard refreshes
  * via sessionStorage. Uploaded images are blob: URLs that die on reload, so a
- * restored session drops them gracefully (the data-URI sample survives).
+ * restored session falls back to the bundled sample.
  */
 
 import {
@@ -15,64 +16,64 @@ import {
   useEffect,
   useRef,
   useState,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react";
-import { DEFAULT_CONTENT } from "@/lib/sampleContent";
+import { DEFAULT_CARD, DEFAULT_FOCAL, DEFAULT_MEDIA } from "@/lib/sampleContent";
 import type { PlatformVisibility } from "@/components/RcsInputPanel";
-import type { OverlayToggles, RcsContent } from "@/types/rcs";
+import type { FocalPoint, MediaIntrospection, OverlayToggles, StandaloneRichCard } from "@/types/rcs";
 
 interface SimulatorState {
-  content: RcsContent;
-  patchContent: (patch: Partial<RcsContent>) => void;
-  replaceContent: (content: RcsContent) => void;
+  card: StandaloneRichCard;
+  media: MediaIntrospection | undefined;
+  focal: FocalPoint;
+  setCard: Dispatch<SetStateAction<StandaloneRichCard>>;
+  setMedia: Dispatch<SetStateAction<MediaIntrospection | undefined>>;
+  setFocal: Dispatch<SetStateAction<FocalPoint>>;
+  replaceAll: (next: { card: StandaloneRichCard; media: MediaIntrospection | undefined; focal: FocalPoint }) => void;
   toggles: OverlayToggles;
   setToggles: (toggles: OverlayToggles) => void;
   platforms: PlatformVisibility;
   setPlatforms: (platforms: PlatformVisibility) => void;
 }
 
-const STORAGE_KEY = "rcs-sim-state-v1";
+const STORAGE_KEY = "rcs-sim-state-v2";
 
 const SimulatorContext = createContext<SimulatorState | null>(null);
 
 export function SimulatorProvider({ children }: { children: ReactNode }) {
-  const [content, setContent] = useState<RcsContent>(DEFAULT_CONTENT);
+  const [card, setCard] = useState<StandaloneRichCard>(DEFAULT_CARD);
+  const [media, setMedia] = useState<MediaIntrospection | undefined>(DEFAULT_MEDIA);
+  const [focal, setFocal] = useState<FocalPoint>(DEFAULT_FOCAL);
   const [toggles, setToggles] = useState<OverlayToggles>({
     showSafeZone: true,
     showCropArea: false,
     showTextLineLimits: true,
   });
-  const [platforms, setPlatforms] = useState<PlatformVisibility>({
-    ios: true,
-    android: true,
-  });
+  const [platforms, setPlatforms] = useState<PlatformVisibility>({ ios: true, android: true });
   const restored = useRef(false);
 
-  // Restore once after mount — sessionStorage doesn't exist during SSR, and
-  // reading it in the initial state would cause a hydration mismatch, so the
-  // one-time post-mount setState here is intentional.
+  // Restore once after mount — sessionStorage doesn't exist during SSR.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved.content) {
-          const savedContent = saved.content as RcsContent;
-          if (
-            !savedContent.imageUrl ||
-            savedContent.imageUrl.startsWith("blob:") ||
-            !savedContent.imageMetadata
-          ) {
-            // Uploaded images are blob: URLs that die on reload (and older
-            // saves may carry a dropped/imageless state). Fall back to the
-            // bundled sample so a restored session never renders empty —
-            // the user can simply re-upload their file.
-            savedContent.imageUrl = DEFAULT_CONTENT.imageUrl;
-            savedContent.imageMetadata = DEFAULT_CONTENT.imageMetadata;
-            savedContent.focalPoint = DEFAULT_CONTENT.focalPoint;
+        if (saved.card) {
+          const fileUrl = (saved.card as StandaloneRichCard).cardContent.media?.contentInfo.fileUrl;
+          if (!fileUrl || fileUrl.startsWith("blob:") || !saved.media) {
+            // Uploaded images are blob: URLs that die on reload — fall back to the
+            // bundled sample so a restored session never renders empty.
+            setCard(DEFAULT_CARD);
+            setMedia(DEFAULT_MEDIA);
+            setFocal(DEFAULT_FOCAL);
+          } else {
+            setCard(saved.card);
+            setMedia(saved.media);
+            if (saved.focal) setFocal(saved.focal);
           }
-          setContent(savedContent);
         }
         if (saved.toggles) setToggles(saved.toggles);
         if (saved.platforms) setPlatforms(saved.platforms);
@@ -87,16 +88,24 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!restored.current) return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ content, toggles, platforms }));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ card, media, focal, toggles, platforms }));
     } catch {
       // storage full/unavailable — state simply won't survive a refresh
     }
-  }, [content, toggles, platforms]);
+  }, [card, media, focal, toggles, platforms]);
 
   const value: SimulatorState = {
-    content,
-    patchContent: (patch) => setContent((prev) => ({ ...prev, ...patch })),
-    replaceContent: setContent,
+    card,
+    media,
+    focal,
+    setCard,
+    setMedia,
+    setFocal,
+    replaceAll: ({ card: c, media: m, focal: f }) => {
+      setCard(c);
+      setMedia(m);
+      setFocal(f);
+    },
     toggles,
     setToggles,
     platforms,

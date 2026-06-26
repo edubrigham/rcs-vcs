@@ -2,19 +2,24 @@
 
 /**
  * The preview toolbar shared by the Draft page and the Playbook Pass page:
- * card-format segmented control, iOS/Android visibility toggles, overlay filter
- * icons, and the rendering-approximation disclaimer. Keeping it in one place is
- * what makes the two pages feel continuous.
+ * 2-axis orientation/height control, iOS/Android visibility toggles, overlay
+ * filter icons, and the rendering-approximation disclaimer.
  */
 
 import type { ReactNode } from "react";
-import type { CardFormat, OverlayToggles, Platform } from "@/types/rcs";
+import type { CardOrientation, MediaHeight, OverlayToggles, Platform } from "@/types/rcs";
 import type { PlatformVisibility } from "@/components/RcsInputPanel";
 
 const DISCLAIMER =
   "This is an approximation based on the RCS UX playbooks. Actual rendering may vary by device, font size, app version, and orientation.";
 
-const CARD_FORMATS: CardFormat[] = ["compact", "medium", "tall"];
+/** Human-readable badge for the resolved render geometry. */
+function renderBadge(orientation: CardOrientation, height: MediaHeight): string {
+  if (orientation === "HORIZONTAL") return "1:1 thumbnail";
+  if (height === "SHORT") return "7:2 vertical";
+  if (height === "MEDIUM") return "3:2 vertical";
+  return "4:3 vertical";
+}
 
 const OVERLAY_FILTERS: { key: keyof OverlayToggles; label: string; icon: ReactNode }[] = [
   {
@@ -50,15 +55,16 @@ const OVERLAY_FILTERS: { key: keyof OverlayToggles; label: string; icon: ReactNo
 ];
 
 interface PreviewToolbarProps {
-  cardFormat: CardFormat;
-  onFormatChange: (format: CardFormat) => void;
+  orientation: CardOrientation;
+  height: MediaHeight;
+  onOrientationChange: (orientation: CardOrientation) => void;
+  onHeightChange: (height: MediaHeight) => void;
   toggles: OverlayToggles;
   onTogglesChange: (toggles: OverlayToggles) => void;
   /**
-   * Platform control. "none" (default) renders nothing — the page shows every
-   * platform (Draft, which always shows iOS + Android side by side). "single"
-   * renders an iOS↔Android segmented toggle showing one platform at a time
-   * (Playbook Pass); requires `platforms`/`onPlatformsChange`.
+   * Platform control. "none" (default) renders nothing. "single" renders an
+   * iOS↔Android segmented toggle showing one platform at a time (Playbook Pass);
+   * requires `platforms`/`onPlatformsChange`.
    */
   platformMode?: "none" | "single";
   platforms?: PlatformVisibility;
@@ -66,38 +72,69 @@ interface PreviewToolbarProps {
 }
 
 export default function PreviewToolbar({
-  cardFormat,
-  onFormatChange,
+  orientation,
+  height,
+  onOrientationChange,
+  onHeightChange,
   toggles,
   onTogglesChange,
   platformMode = "none",
   platforms,
   onPlatformsChange,
 }: PreviewToolbarProps) {
-  // Single-select: derive the one active platform from the shared visibility
-  // state (default iOS when ambiguous).
   const activePlatform: Platform = platforms?.android && !platforms.ios ? "android" : "ios";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-4 py-2.5">
-      <div className="flex overflow-hidden rounded-lg border border-line">
-        {CARD_FORMATS.map((format, i) => (
-          <button
-            key={format}
-            type="button"
-            onClick={() => onFormatChange(format)}
-            aria-pressed={cardFormat === format}
-            className={`px-4 py-1.5 text-xs font-semibold capitalize transition ${
-              i > 0 ? "border-l border-line" : ""
-            } ${
-              cardFormat === format
-                ? "border-[var(--color-primary)] bg-panel-strong text-[var(--color-primary)]"
-                : "text-muted hover:text-body"
-            }`}
-          >
-            {format}
-          </button>
-        ))}
+      {/* Orientation toggle */}
+      <div className="flex items-center gap-2">
+        <div className="flex overflow-hidden rounded-lg border border-line">
+          {(["HORIZONTAL", "VERTICAL"] as const).map((o, i) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => onOrientationChange(o)}
+              aria-pressed={orientation === o}
+              className={`px-3 py-1.5 text-xs font-semibold transition ${
+                i > 0 ? "border-l border-line" : ""
+              } ${
+                orientation === o
+                  ? "bg-panel-strong text-[var(--color-primary)]"
+                  : "text-muted hover:text-body"
+              }`}
+            >
+              {o === "HORIZONTAL" ? "Horizontal" : "Vertical"}
+            </button>
+          ))}
+        </div>
+
+        {/* Height picker — only visible when VERTICAL */}
+        {orientation === "VERTICAL" && (
+          <div className="flex overflow-hidden rounded-lg border border-line">
+            {(["SHORT", "MEDIUM", "TALL"] as const).map((h, i) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => onHeightChange(h)}
+                aria-pressed={height === h}
+                className={`px-3 py-1.5 text-xs font-semibold capitalize transition ${
+                  i > 0 ? "border-l border-line" : ""
+                } ${
+                  height === h
+                    ? "bg-panel-strong text-[var(--color-primary)]"
+                    : "text-muted hover:text-body"
+                }`}
+              >
+                {h.charAt(0) + h.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Badge showing the resolved render geometry */}
+        <span className="rounded border border-line bg-panel px-2 py-0.5 font-mono text-[10px] text-muted">
+          {renderBadge(orientation, height)}
+        </span>
       </div>
 
       {platformMode === "single" && onPlatformsChange && (

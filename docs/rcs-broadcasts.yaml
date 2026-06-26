@@ -1,0 +1,1850 @@
+openapi: 3.0.3
+
+info:
+  title: RCS Broadcasts
+  description: RCS Broadcasts API definition
+  version: 2023-03-25
+servers:
+  - url: https://api.naxai.com
+
+
+tags:
+  - name: RCS Broadcasts
+    description: Operations about RCS Broadcast.
+
+
+
+
+security:
+  - OAuth2:
+      - send:sms
+
+paths:
+
+  /rcs/broadcasts:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "List all RCS Broadcasts"
+      description: "List all RCS Broadcasts."
+      operationId: rcsBroadcastList
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+    
+        - name: page
+          in: query
+          description: 'The page number.'
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pagesize
+          in: query
+          description: 'The page size limit.'
+          required: false
+          schema:
+            type: integer
+            maximum: 100
+            minimum: 1
+            default: 25
+
+
+      responses:
+        200:
+          description: "A successful request returns the list of RCS Broadcasts."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastList"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+    post:
+      tags:
+        - RCS Broadcasts
+      summary: "Create an RCS Broadcast"
+      description: "Create an RCS Broadcast."
+      operationId: rcsBroadcastCreate
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+       
+
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/rcsBroadcast"
+
+      responses:
+        200:
+          description: "A successful request returns the broadcast object."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcast"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+  /rcs/broadcasts/{broadcastId}:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "Get an RCS Broadcast"
+      description: "Get an RCS Broadcast by id."
+      operationId: rcsBroadcastGetById
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+       
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+      responses:
+        200:
+          description: "A successful request returns an RCS Broadcast."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcast"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+    delete:
+      tags:
+        - RCS Broadcasts
+      summary: "Delete a draft RCS Broadcast"
+      description: "Delete a RCS Broadcast by id, only draft RCS Broadcast can be deleted."
+      operationId: rcsBroadcastDeleteById
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          required: false
+          schema:
+            type: string
+    
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+      responses:
+        204:
+          description: "A successful request returns an empty response."
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+    put:
+      tags:
+        - RCS Broadcasts
+      summary: "Update an RCS Broadcast"
+      description: "Update an RCS Broadcast by id."
+      operationId: rcsBroadcastUpdateById
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+          required: false
+        
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/rcsBroadcast"
+
+      responses:
+        200:
+          description: "A successful request returns the broadcast object."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcast"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+  /rcs/broadcasts/upload-url:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "Provide the upload URL for the broadcast CSV file."
+      description: "Provide the upload URL for the broadcast CSV file."
+      operationId: rcsBroadcastUploadURL
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          required: false
+          schema:
+            type: string
+       
+        - name: filename
+          description: "The name of the broadcast file"
+          in: query
+          schema: 
+            type: string
+            example: "myFile.csv"
+
+      responses:
+        200:
+          description: Pre-signed URL and fields for uploading a file generated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: The URL to which the file should be submitted.
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+              
+
+  /rcs/broadcasts/{broadcastId}/start:
+    post:
+      tags:
+        - RCS Broadcasts
+      summary: "Start an RCS Broadcast"
+      description: "Start an RCS Broadcast"
+      operationId: rcsBroadcastStart
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          required: false
+          schema:
+            type: string
+       
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+      responses:
+        202:
+          description: "A successful request returns an accepted response code."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastState"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+  /rcs/broadcasts/{broadcastId}/pause:
+    post:
+      tags:
+        - RCS Broadcasts
+      summary: "Pause an RCS Broadcast"
+      description: "Pause an RCS Broadcast"
+      operationId: rcsBroadcastPause
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+          required: false
+      
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+          required: true
+      responses:
+        202:
+          description: "A successful request returns an accepted response code."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastState"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+  /rcs/broadcasts/{broadcastId}/resume:
+    post:
+      tags:
+        - RCS Broadcasts
+      summary: "Resume an RCS Broadcast"
+      description: "Resume an RCS Broadcast"
+      operationId: rcsBroadcastResume
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+          required: false
+      
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+      responses:
+        202:
+          description: "A successful request returns an accepted response code."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastState"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+  /rcs/broadcasts/{broadcastId}/cancel:
+    post:
+      tags:
+        - RCS Broadcasts
+      summary: "Cancel an RCS Broadcast"
+      description: "Cancel an RCS Broadcast"
+      operationId: rcsBroadcastCancel
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+       
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+      responses:
+        202:
+          description: "A successful request returns an accepted response code."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastState"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+  /rcs/broadcasts/{broadcastId}/metrics/totals:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "Get the RCS Broadcast metrics"
+      description: "Get the metrics for an RCS Broadcast by id."
+      operationId: rcsBroadcastMetricsGetById
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+     
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+      responses:
+        200:
+          description: "A successful request returns the RCS Broadcast metrics."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastMetricsTotals"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+  /rcs/broadcasts/{broadcastId}/metrics/postback-data:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "Get the RCS Broadcast postback data metrics"
+      description: "Get the postback data metrics for an RCS Broadcast by id."
+      operationId: rcsBroadcastMetricsPostbackDataGetById
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+     
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+      responses:
+        200:
+          description: "A successful request returns the RCS Broadcast metrics."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastMetricsPostbackDataList"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+
+
+  /rcs/broadcasts/{broadcastId}/recipients:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "Get the list of recipients for the RCS Broadcast"
+      description: "Get the recipients for a RCS Broadcast by id."
+      operationId: rcsBroadcastRecipientsGet
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+      
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+        - name: page
+          in: query
+          description: 'The page number.'
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pagesize
+          in: query
+          description: 'The page size limit.'
+          required: false
+          schema:
+            type: integer
+            maximum: 100
+            minimum: 1
+            default: 25
+        - name: phone
+          in: query
+          required: false
+          description: 'Search by phone number in E164 without leading +'
+          schema:
+            type: string
+            minimum: 7
+            maximum: 20
+            example: '32499365485'
+        - name: completed
+          in: query
+          description: 'Filter based on the completed state, take all if omitted.'
+          required: false
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          description: 'Filter based on the status, take all if omitted.'
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'delivered'
+              - 'failed'
+              - 'queued'
+              - 'sent'
+              - 'canceled'
+              - 'invalid'
+              - 'paused'
+              - 'not-started'
+
+      responses:
+        200:
+          description: "A successful request returns the RCS Broadcast recipients."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastRecipientsList"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The RCS Broadcast does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+  /rcs/broadcasts/{broadcastId}/recipients/{recipientId}:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "Get details for a recipient of an RCS Broadcast"
+      description: "Get the recipient details given by recipient id."
+      operationId: rcsBroadcastRecipientsGetById
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+       
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+          required: true
+        - name: recipientId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+          required: true
+
+      responses:
+        200:
+          description: "A successful request returns the RCS Broadcast recipients."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastRecipient"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The recipient does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+  /rcs/broadcasts/{broadcastId}/recipients/{recipientId}/postback-data:
+    get:
+      tags:
+        - RCS Broadcasts
+      summary: "Get the postback data for a recipient of an RCS Broadcast"
+      description: "Get the postback data for a recipient given by recipient id."
+      operationId: rcsBroadcastRecipientsPostbackDataGetById
+      parameters:
+        - name: x-version
+          description: "The version of API, by default use the last version."
+          in: header
+          schema:
+            type: string
+       
+        - name: broadcastId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+          required: true
+        - name: recipientId
+          description: 'The RCS Broadcast Id to retrieve.'
+          in: path
+          schema:
+            type: string
+            format: uuid
+            example: '1f3b25a8-a9fc-4139-a1b8-a0e55d4f7dfd'
+          required: true
+
+      responses:
+        200:
+          description: "A successful request returns the RCS Broadcast recipients."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/rcsBroadcastRecipientPostbackDataList"
+
+        401:
+          description: "Unauthorized request. Make sure that you provided the right credentials."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        404:
+          description: "The recipient does not exist with the given id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+        422:
+          description: "The request is invalid."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+        429:
+          description: "Too Many Requests."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorModel"
+
+
+
+
+
+
+
+components:
+  schemas:
+
+    rcsBroadcastList:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            totalRecord:
+              type: integer
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            returnedRecord:
+              type: integer
+            remainingRecord:
+              type: integer
+            first:
+              type: string
+            next:
+              type: string
+            last:
+              type: string
+            previous:
+              type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/rcsBroadcast"
+
+    rcsBroadcastBase:
+      required:
+        - name
+        - senderServiceId
+        - source
+      properties:
+        broadcastId:
+          type: string
+          format: uuid
+          description: "The RCS Broadcast Id"
+          example: '55575a7e-5ebf-4b69-8935-56119ff87dc0'
+          readOnly: true
+        name:
+          type: string
+          description: "The name of the RCS Broadcast."
+          example: 'Payment Reminder'
+        senderServiceId:
+          type: string
+          format: uuid
+          description: 'The sender service Id to use when sending RCS messages.'
+          example: '01ace36c-ee79-4b64-97b8-7101bd7929c7'
+        source:
+          type: string
+          description: 'The recipient source.'
+          enum:
+            - 'people'
+            - 'file'
+          default: 'people'
+          example: 'people'
+        state:
+          type: string
+          enum:
+            - 'draft'
+            - 'starting'
+            - 'started'
+            - 'paused'
+            - 'completed'
+            - 'canceled'
+            - 'scheduled'
+            - 'resuming'
+            - 'pausing'
+            - 'canceling'
+          description: 'The state of the broadcast.'
+          example: 'draft'
+          readOnly: true
+        scheduledAt:
+          type: string
+          description: 'Indicates when the broadcast should start in unix time, null if not scheduled'
+          example: 1710316651
+        startedAt:
+          type: integer
+          description: 'When the broadcast was started in unix time, null if not started.'
+          example: 1710316651
+          readOnly: true
+        pausedAt:
+          type: integer
+          description: 'When the broadcast was paused in unix time, null if not paused.'
+          example: 1710316651
+          readOnly: true
+        canceledAt:
+          type: integer
+          description: 'When the broadcast was canceled in unix time, null if not canceled.'
+          example: 1710316651
+          readOnly: true
+        completedAt:
+          type: integer
+          description: 'When the broadcast was completed in unix time, null if not completed.'
+          example: 1710316651
+          readOnly: true
+        calendarId:
+          type: string
+          format: uuid
+          description: 'The calendar to use, can be omitted.'
+          example: 'c146b84e-8cd2-4910-b6ff-0700d455d9b6'
+        distribution:
+          type: string
+          enum:
+            - 'dynamic'
+            - 'none'
+            - 'static'
+          default: 'none'
+          description: 'If a specific distribution must be used.'
+        dynamicName:
+          type: string
+          description: 'The name of the dynamic load distribution for dynamic distribution.'
+          example: 'contact-center-limit'
+        staticPeriod:
+          type: string
+          enum:
+            - 'day'
+            - 'hour'
+            - 'minute'
+          description: 'The period to use when distributing messages with the static distribution.'
+          default: 'minute'
+        staticRate:
+          type: integer
+          description: 'The maximum number of messages to send during one period.'
+          minimum: 1
+          maximum: 10000
+          example: 100
+        rcsContentBody:
+          discriminator:
+            propertyName: type
+            mapping:
+              text: '#/components/schemas/messageText'
+              standaloneRichCard: '#/components/schemas/messageStandaloneRichCard'
+              carouselRichCard: '#/components/schemas/messageCarouselRichCard'
+          oneOf:
+            - $ref: '#/components/schemas/messageText'
+            - $ref: '#/components/schemas/messageStandaloneRichCard'
+            - $ref: '#/components/schemas/messageCarouselRichCard'
+          
+        smsFallbackBody:
+          type: string
+          description: 'The SMS fallback message to send.'
+          maximum: 2000
+          example: 'Reminder: Your subscription to Acme will expire soon.'
+        smsEncoding:
+          type: string
+          description: 'The encoding to use for the SMS fallback body.'
+          enum:
+            - 'auto'
+            - 'text'
+            - 'unicode'
+          default: 'auto'
+          example: 'auto'
+        allowDuplicates:
+          type: boolean
+          description: 'If set to true, allow sending multiple messages to the same destination (when source is file).'
+          example: false
+        validityPeriodInSec:
+          type: integer
+          description: 'The validity period of the message in seconds (default = 259200 = 3 days)'
+          example: 3600
+          minimum: 5
+          maximum: 259200
+        totalCount:
+          type: integer
+          description: 'The number of recipients in the broadcast.'
+          default: 0
+          example: 120
+          readOnly: true
+        completedCount:
+          type: integer
+          description: 'The number of recipients reached.'
+          default: 0
+          example: 120
+          readOnly: true
+        createdAt:
+          type: integer
+          description: 'The creation datetime of the broadcast.'
+          example: 1708423066
+          readOnly: true
+        modifiedBy:
+          type: string
+          description: 'The responsible of the last update.'
+          example: 'test@example.com'
+          readOnly: true
+
+    rcsBroadcastPeople:
+      allOf:
+        - $ref: '#/components/schemas/rcsBroadcastBase'
+        - type: object
+          required:
+            - source
+            - segmentIds
+            - includeUnsubscribed
+          properties:
+            source:
+              type: string
+              enum:
+                - 'people'
+            segmentIds:
+              type: array
+              minItems: 1
+              maxItems: 1
+              items:
+                type: string
+                format: uuid
+                description: 'The segment to use for broadcasting message.'
+                example: '78a7fd91-c968-4f64-9900-33f7477879c3'
+            includeUnsubscribed:
+              type: boolean
+              description: 'Indicates if the broadcast must be sent to unsubscribed people.'
+              example: false
+
+    rcsBroadcastFile:
+      allOf:
+        - $ref: '#/components/schemas/rcsBroadcastBase'
+        - type: object
+          required:
+            - source
+            - file
+          properties:
+            source:
+              type: string
+              enum:
+                - 'file'
+            file:
+              type: object
+              description: 'The file used for broadcasting messages.'
+              required:
+                - filename
+                - phonecolumn
+              properties:
+                filename:
+                  type: string
+                  example: '1751234654_myFile.csv'
+                phonecolumn:
+                  type: string
+                  example: "phonenumber"
+                numberOfRows:
+                  type: integer
+                fileExtract:
+                  type: array
+                  readOnly: true
+                  items:
+                    type: string
+                defaultCountry:
+                  type: string
+                  example: "BE"
+                  description: "The default country to use for the broadcast. If not provided, the country will be detected from the phone number."
+                  enum:
+                    - "BE"
+                    - "LU"
+                    - "FR"
+                    - "NL"
+                    - "DE"
+                    - "ES"
+
+    rcsBroadcast:
+      oneOf:
+        - $ref: '#/components/schemas/rcsBroadcastPeople'
+        - $ref: '#/components/schemas/rcsBroadcastFile'
+      discriminator:
+        propertyName: source
+        mapping:
+          people: '#/components/schemas/rcsBroadcastPeople'
+          file: '#/components/schemas/rcsBroadcastFile'
+
+
+
+
+    rcsBroadcastState:
+      properties:
+        broadcastId:
+          type: string
+          format: uuid
+          description: "The RCS Broadcast."
+          example: '55575a7e-5ebf-4b69-8935-56119ff87dc0'
+        status:
+          type: string
+          description: 'The task operation'
+          enum:
+            - 'starting'
+            - 'pausing'
+            - 'resuming'
+            - 'canceling'
+          example: 'starting'
+
+
+    rcsBroadcastMetricsTotals:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: 'The total number of recipients'
+        completed:
+          type: integer
+          description: 'The total number of recipients completed.'
+        delivered:
+          type: integer
+          description: 'The total number of recipients with a delivered status.'
+        failed:
+          type: integer
+          description: 'The total number of recipients with a failed status.'
+        canceled:
+          type: integer
+          description: 'The total number of recipients with a canceled status.'
+        paused:
+          type: integer
+          description: 'The total number of recipients with a paused status.'
+        invalid:
+          type: integer
+          description: 'The total number of recipients with a invalid status.'
+        queued:
+          type: integer
+          description: 'The total number of recipients queued.'
+        unsubscribed:
+          type: integer
+          description: 'The total number of recipients unsubscribed.'
+        read:
+          type: integer
+          description: 'The total number of recipients with a read status.'
+        rcsDelivered:
+          type: integer
+          description: 'The total number of recipients with a delivered status.'
+        smsDelivered:
+          type: integer
+          description: 'The total number of recipients with a delivered status.'
+        postbackDataActionCount: 
+          type: integer
+          description: 'The total number of postbackData Action.'
+
+
+    rcsBroadcastMetricsPostbackDataList:
+      type: array
+      items:
+        $ref: "#/components/schemas/rcsBroadcastMetricsPostbackData"
+      
+    rcsBroadcastMetricsPostbackData:
+      type: object
+      properties:
+        action:
+          type: string
+          description: 'The postback data label.'
+          example: 'Suggestion #1'
+        type:
+          type: string
+          description: 'The type of the postback data. Reply for suggested Reply or action for suggested Action.'
+          enum:
+            - 'reply'
+            - 'action'
+          example: 'action'
+        count:
+          type: integer
+          description: 'The count of the postback data.'
+          example: 100
+
+
+    rcsBroadcastRecipientsList:
+        type: object
+        properties:
+          pagination:
+            type: object
+            properties:
+              totalRecord:
+                type: integer
+              page:
+                type: integer
+              pageSize:
+                type: integer
+              returnedRecord:
+                type: integer
+              remainingRecord:
+                type: integer
+              first:
+                type: string
+              next:
+                type: string
+              last:
+                type: string
+              previous:
+                type: string
+          items:
+            type: array
+            items:
+              $ref: "#/components/schemas/rcsBroadcastRecipient"
+
+    rcsBroadcastRecipient:
+      type: object
+      properties:
+        recipientId:
+          type: string
+          format: uuid
+          description: 'The unique identifier of the recipient.'
+          example: 'c25a80d3-9912-4dc3-aab6-9ba8b8fdd497'
+        phone:
+          type: string
+          description: 'The destination phone number.'
+          example: '32479001100'
+        contactId:
+          type: string
+          format: uuid
+          description: 'The unique identifier of the contact, if the source is people.'
+          example: 'a18b076f-4206-4392-a0e5-a0ee588cebbf'
+        firstname:
+          type: string
+          description: 'The firstname of the contact, if the source is people.'
+          example: 'John'
+        lastname:
+          type: string
+          description: 'The lastname of the contact, if the source is people.'
+          example: 'Doe'
+        channel:
+          type: string
+          description: 'The channel of the recipient.'
+          enum:
+            - 'rcs'
+            - 'sms'
+          example: 'rcs'
+        messageId:
+          type: string
+          format: uuid
+          description: 'The unique identifier of message sent.'
+          example: '820893b5-69f3-46c0-bce8-ac2416d959c0'
+        completed:
+          type: boolean
+          description: 'Indicate if the RCS message has been sent'
+          example: true
+        status:
+          type: string
+          description: 'The status of the recipient.'
+          enum:
+            - 'delivered'
+            - 'failed'
+            - 'canceled'
+            - 'queued'
+            - 'invalid'
+            - 'paused'
+            - 'sent'
+            - 'not-started'
+          example: 'delivered'
+        reason:
+          type: string
+          description: 'Additional information about the delivery or error of message.'
+          example: '200-delivered'
+
+        read:
+          type: boolean
+          description: 'Indicate if the RCS message has been read.'
+          example: true
+        
+        scheduledAt:
+          type: integer
+          description: 'When the message was scheduled.'
+          example: 1709725525
+
+        submittedAt:
+          type: integer
+          description: 'When the message was submitted to operator.'
+          example: 1709725525
+
+        deliveredAt:
+          type: integer
+          description: 'When the message was delivered.'
+          example: 1709725525
+        
+        readAt:
+          type: integer
+          description: 'When the message was read.'
+          example: 1709725525
+
+        lastUpdatedAt:
+          type: integer
+          description: 'When the recipient was updated for the last time'
+          example: 1709725525
+
+
+
+    errorModel:
+      required:
+        - type
+        - errors
+        - naxaiTraceId
+      type: object
+      properties:
+        type:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+              fieldName:
+                type: string
+        naxaiTraceId:
+          type: string
+
+    # message:
+    #   discriminator:
+    #     propertyName: type
+    #     mapping:
+    #       text: '#/components/schemas/messageText'
+    #       standaloneRichCard: '#/components/schemas/messageStandaloneRichCard'
+    #       carouselRichCard: '#/components/schemas/messageCarouselRichCard'
+    #   oneOf:
+    #     - $ref: '#/components/schemas/messageText'
+    #     - $ref: '#/components/schemas/messageStandaloneRichCard'
+    #     - $ref: '#/components/schemas/messageCarouselRichCard'
+
+
+    suggestions:
+      type: array
+      items:
+        type: object
+        discriminator:
+          propertyName: type
+          mapping:
+            reply: '#/components/schemas/suggestedReplies'
+            action: '#/components/schemas/suggestedActions'
+        oneOf:
+          - $ref: '#/components/schemas/suggestedReplies'
+          - $ref: '#/components/schemas/suggestedActions'
+
+
+    messageText:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          description: "Value `text`"
+          example: 'text'
+        text:
+          type: string
+          maxLength: 2000
+          example: 'Hello world'
+          description: 'Text encoded in UTF-8. Maximum 2000 characters.'
+
+
+    messageStandaloneRichCard:
+      type: object
+      required:
+        - type
+        - cardOrientation
+        - cardContent
+      properties:
+        type:
+          type: string
+          description: "Value `standaloneRichCard`"
+          example: 'standaloneRichCard'
+        cardOrientation:
+          type: string
+          enum:
+            - 'HORIZONTAL'
+            - 'VERTICAL'
+          description: 'Orientation of the card.'
+          example: 'HORIZONTAL'
+
+        thumbnailImageAlignment:
+          type: string
+          enum:
+            - 'LEFT'
+            - 'RIGHT'
+          description: 'Image preview alignment for standalone cards with horizontal layout.'
+          example: 'LEFT'
+
+        cardContent:
+          $ref: '#/components/schemas/cardContent'
+
+
+    messageCarouselRichCard:
+      type: object
+      required:
+        - type
+        - cardWidth
+        - cardContents
+      properties:
+        type:
+          type: string
+          description: "Value `carouselRichCard`"
+        cardWidth:
+          type: string
+          enum:
+            - 'SMALL'
+            - 'MEDIUM'
+          description: 'The width of the cards in the carousel.'
+        cardContents:
+          type: array
+          minItems: 2
+          maxItems: 10
+          description: 'The list of contents for each card in the carousel. A carousel can have a minimum of 2 cards and a maximum 10 cards.'
+          items:
+            $ref: '#/components/schemas/cardContent'
+
+
+    cardContent:
+      type: object
+      properties:
+        title:
+          type: string
+          description: "Title of the card. Maximum 200 characters."
+          maxLength: 200
+        description:
+          type: string
+          description: "Description of the card. Maximum 2000 characters."
+          maxLength: 2000
+        media:
+          $ref: '#/components/schemas/media'
+        suggestions:
+          type: array
+          maxItems: 4
+          items:
+            type: object
+            discriminator:
+              propertyName: type
+              mapping:
+                reply: '#/components/schemas/suggestedReplies'
+                action: '#/components/schemas/suggestedActions'
+            oneOf:
+              - $ref: '#/components/schemas/suggestedReplies'
+              - $ref: '#/components/schemas/suggestedActions'
+
+
+
+    media:
+      type: object
+      description: '(Optional) Media (image, GIF, video) to include in the card.'
+      required:
+        - height
+        - contentInfo
+      properties:
+        height:
+          type: string
+          enum:
+            - 'SHORT'
+            - 'MEDIUM'
+            - 'TALL'
+          description: 'The height of the media within a rich card with a vertical layout. For a standalone card with horizontal layout, height is not customizable, and this field is ignored.'
+        contentInfo:
+          $ref: '#/components/schemas/contentInfo'
+
+
+    contentInfo:
+      type: object
+      required:
+        - type
+        - fileUrl
+      properties:
+        fileUrl:
+          type: string
+          format: uri
+          description: 'Publicly reachable URL of the file. The RBM platform determines the MIME type of the file from the content-type field in the HTTP headers when the platform fetches the file. The content-type field must be present and accurate in the HTTP response from the URL. Recommended maximum file size of 100 MB.'
+          example: "https://example.com/file.png"
+        thumbnailUrl:
+          type: string
+          format: uri
+          description: "(Optional, for image, audio and video files only) Publicly reachable URL of the thumbnail. Maximum size of 100 kB. If you don't provide a thumbnail URL, the RBM platform displays a blank placeholder thumbnail until the user's device downloads the file. Depending on the user's setting, the file may not download automatically and may require the user to tap a download button.'"
+          example: "https://example.com/thumbnail.png"
+        forceRefresh:
+          type: boolean
+          description: 'If set, fetches the file and thumbnail from the specified URLs, even if the platform has cached copies of the file (and/or of the thumbnail).'
+          example: true
+          default: false
+
+
+    suggestedReplies:
+      type: object
+      title: 'Suggested Replies'
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          description: 'Value: `reply`'
+          example: 'reply'
+        text:
+          description: 'The user-visible text of the suggestion that the user tapped. Maximum 25 characters.'
+          maximum: 25
+          example: 'Suggestion #1'
+        postbackData:
+          description: 'The postback data specified by the agent when the agent sent the suggestion to the user.'
+          example: 'suggestion_1'
+          maximum: 65
+
+
+    suggestedActions:
+      type: object
+      title: 'Suggested Actions'
+      required:
+        - type
+        - text
+        - action
+      properties:
+        type:
+          type: string
+          description: 'Value: `action`'
+          example: 'action'
+        text:
+          description: 'Text that is shown in the suggested action. Maximum 25 characters.'
+          maximum: 25
+          example: 'Suggestion #1'
+        postbackData:
+          description: 'The postback data specified by the agent when the agent sent the suggestion to the user.'
+          example: 'suggestion_1'
+          maximum: 2048
+        action:
+          type: object
+          discriminator:
+            propertyName: type
+            mapping:
+              dialAction: '#/components/schemas/dialAction'
+              viewLocationAction: '#/components/schemas/viewLocationAction'
+              createCalendarEventAction: '#/components/schemas/createCalendarEventAction'
+              openUrlAction: '#/components/schemas/openUrlAction'
+
+          oneOf:
+            - $ref: '#/components/schemas/dialAction'
+            - $ref: '#/components/schemas/viewLocationAction'
+            - $ref: '#/components/schemas/createCalendarEventAction'
+            - $ref: '#/components/schemas/openUrlAction'
+
+
+
+    dialAction:
+      type: object
+      description: "Calls a phone number via the user's dialler app"
+      required:
+        - type
+        - phoneNumber
+      properties:
+        type:
+          type: string
+          description: 'Value `dialAction`'
+          example: 'dialAction'
+        phoneNumber:
+          type: string
+          minLength: 7
+          maxLength: 20
+          description: 'The phone number in E.164 format without leading +, for example, 3223342323.'
+          example: '3223342323'
+
+    viewLocationAction:
+      type: object
+      description: "Opens the user's default map app and selects the agent-specified location."
+      required:
+        - type
+        - latitude
+        - longitude
+      properties:
+        type:
+          type: string
+          description: "Value 'viewLocationAction'"
+        latitude:
+          type: number
+          description: 'The latitude in degrees. It must be in the range [-90.0, +90.0].'
+        longitude:
+          type: number
+          description: 'The longitude in degrees. It must be in the range [-180.0, +180.0].'
+        label:
+          type: string
+          description: 'The label of the pin dropped at latLong.'
+          maximum: 1024
+
+    createCalendarEventAction:
+      type: object
+      description: "Opens the user's default calendar app and starts the new calendar event flow with the agent-specified event data pre-filled."
+      required:
+        - type
+        - startTime
+        - endTime
+        - title
+        - description
+      properties:
+        type:
+          type: string
+          description: "Value 'createCalendarEventAction'"
+        startTime:
+          type: string
+          description: 'Event start time, A timestamp in RFC3339 UTC "Zulu" format, 2024-05-02T15:01:23Z'
+        endTime:
+          type: string
+          description: 'Event end time, A timestamp in RFC3339 UTC "Zulu" format, 2024-05-02T15:01:23Z'
+        title:
+          type: string
+          description: 'Event title. Maximum 100 characters.'
+          maxLength: 100
+        description:
+          type: string
+          description: 'Event description. Maximum 500 characters.'
+          maxLength: 500
+
+    openUrlAction:
+      type: object
+      description: "Opens the user's default web browser app to the specified URL."
+      required:
+        - type
+        - url
+      properties:
+        type:
+          type: string
+          description: "value 'openUrlAction'"
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: 'URL. Maximum 2048 characters.'
+
+    rcsBroadcastRecipientPostbackDataList:
+      type: array
+      items:
+        $ref: "#/components/schemas/rcsBroadcastRecipientPostbackData"
+    rcsBroadcastRecipientPostbackData:
+      type: object
+      properties:
+        postbackData:
+          type: string
+          description: 'The postback data.'
+          example: 'suggestion_1'
+        type:
+          type: string
+          description: 'The type of the postback data. Reply for suggested Reply or action for suggested Action.'
+          enum:
+            - 'reply'
+            - 'action'
+          example: 'action'
+        timestamp:
+          type: integer
+          description: 'The timestamp of the postback data.'
+          example: 1710316651
+
+
+
+
+  securitySchemes:
+     OAuth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.naxai.com/oauth2/token
+          scopes:
+            send:sms: send sms

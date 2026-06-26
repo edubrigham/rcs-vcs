@@ -8,6 +8,7 @@
  */
 
 import { scoreTone } from "@/components/ScorePanel";
+import { cardToView, suggestionsToViews, type CardView } from "@/components/cardView";
 import PlatformPreview from "@/components/PlatformPreview";
 import RcsCardPreview from "@/components/RcsCardPreview";
 import type { PlatformVisibility } from "@/components/RcsInputPanel";
@@ -15,12 +16,11 @@ import type {
   ImprovedRcsContent,
   OverlayToggles,
   Platform,
-  RcsContent,
   ScoreResult,
 } from "@/types/rcs";
 
 interface BeforeAfterComparisonProps {
-  original: RcsContent;
+  original: CardView;
   originalScore: ScoreResult;
   improved: ImprovedRcsContent;
   improvedScore: ScoreResult;
@@ -30,14 +30,29 @@ interface BeforeAfterComparisonProps {
 
 /** Corner-badge content: "Original"/"Improved" + score (+ delta). */
 function CornerBadge({ label, value, delta }: { label: string; value: number; delta?: number }) {
+  const deltaText =
+    delta === undefined ? undefined : delta > 0 ? `+${delta}` : `${delta}`;
+
   return (
     <>
       <span className="font-semibold uppercase tracking-[0.1em] text-muted">{label}</span>
-      <span className={`font-bold ${scoreTone(value)}`}>{value}</span>
-      {delta !== undefined && delta !== 0 && (
-        <span className={delta > 0 ? "text-[var(--color-secondary)]" : "text-[var(--color-destructive)]"}>
-          {delta > 0 ? `▲+${delta}` : `▼${delta}`}
-        </span>
+      {delta === undefined ? (
+        <span className={`font-bold ${scoreTone(value)}`}>{value}</span>
+      ) : (
+        <>
+          <span
+            className={
+              delta > 0
+                ? "text-[var(--color-secondary)]"
+                : delta < 0
+                  ? "text-[var(--color-destructive)]"
+                  : "text-muted"
+            }
+          >
+            {deltaText}
+          </span>
+          <span className="font-bold text-faint"> ({value})</span>
+        </>
       )}
     </>
   );
@@ -51,6 +66,7 @@ export default function BeforeAfterComparison({
   toggles,
   platforms,
 }: BeforeAfterComparisonProps) {
+  const improvedView = cardToView(improved.improvedContent, improved.improvedMedia, improved.improvedFocal);
   const platformScore = (score: ScoreResult, platform: Platform) =>
     platform === "ios" ? score.iosScore : score.androidScore;
   const active = (["ios", "android"] as const).filter((p) => platforms[p]);
@@ -92,12 +108,12 @@ export default function BeforeAfterComparison({
             }
           >
             <RcsCardPreview
-              content={improved.improvedContent}
+              content={improvedView}
               platform={platform}
               toggles={toggles}
               variant="improved"
               subjectPoint={original.focalPoint}
-              secondaryActions={improved.secondaryActions}
+              secondaryActions={suggestionsToViews(improved.secondaryActions)}
             />
           </PlatformPreview>
         </div>

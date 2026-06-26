@@ -94,10 +94,10 @@ export default function ScorePanel({ score }: { score: ScoreResult }) {
           {subScores.map((s) => (
             <div key={s.label}>
               <div className="flex items-baseline justify-between text-[11px]">
-                <span className="text-body">{s.label}</span>
-                <span className="font-mono text-muted">
-                  {s.value} · w {s.weight}
+                <span className="text-body">
+                  {s.label} (w{s.weight})
                 </span>
+                <span className="font-mono text-muted">{s.value}</span>
               </div>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-panel-strong">
                 <div
