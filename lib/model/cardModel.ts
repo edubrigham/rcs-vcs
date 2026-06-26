@@ -25,6 +25,7 @@ export function legacyActionToSuggestion(a: RcsAction): Suggestion {
 }
 
 export function suggestionToLegacyAction(s: Suggestion, primary: boolean): RcsAction {
+  // reply suggestions are never primary CTAs
   if (s.type === "reply") return { id: crypto.randomUUID(), type: "reply", label: s.text, value: s.postbackData ?? "" };
   const url = s.action.type === "openUrlAction" ? s.action.url
     : s.action.type === "dialAction" ? s.action.phoneNumber : "";
@@ -65,6 +66,7 @@ export function cardToLegacy(
     title: card.cardContent.title ?? "",
     description: card.cardContent.description ?? "",
     imageUrl: card.cardContent.media?.contentInfo.fileUrl ?? null,
+    // safe: legacyToCard always sets width/height/aspectRatio together
     imageMetadata: media && media.width != null
       ? { width: media.width, height: media.height!, aspectRatio: media.aspectRatio! }
       : undefined,

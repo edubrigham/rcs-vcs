@@ -39,4 +39,20 @@ describe("bidirectional legacy↔card adapter", () => {
     expect(back.actions[0].type).toBe("openUrl");
     expect(back.actions[0].primary).toBe(true);     // first action-type → primary
   });
+
+  it("round-trips compact format", () => {
+    const legacy: RcsContent = {
+      title: "Compact", description: "Card",
+      imageUrl: "https://x/compact.png",
+      imageMetadata: { width: 1200, height: 400, aspectRatio: 3.0 },
+      actions: [{ id: "1", type: "openUrl", label: "Go", value: "https://example.com", primary: true }],
+      focalPoint: { x: 0.5, y: 0.5 },
+      cardFormat: "compact",
+    };
+
+    const { card, media, focal } = legacyToCard(legacy);
+    expect(card.cardOrientation).toBe("HORIZONTAL");
+    const back = cardToLegacy(card, media, focal);
+    expect(back.cardFormat).toBe("compact");
+  });
 });
