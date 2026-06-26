@@ -100,6 +100,24 @@ export const SUGGESTION_RULES = {
   recommendedCtaCount: 1,
 } as const;
 
+/**
+ * Functional hard limits — authoritative source is the Naxai sendRCS OpenAPI
+ * (`docs/rcs-broadcasts.yaml`); exceed one and the API returns `422`.
+ */
+export const FUNCTIONAL_LIMITS = {
+  TITLE_MAX: 200,
+  DESCRIPTION_MAX: 2000,
+  SUGGESTION_MAX: 4,
+  LABEL_MAX: 25,
+  THUMBNAIL_MAX_BYTES: 100_000,
+  OPEN_URL_MAX: 2048,
+  FILE_MAX_BYTES: 100_000_000,
+} as const;
+
+/** Supported media MIME types — Google RBM rich-cards guide. */
+export const SUPPORTED_IMAGE_MIME = ["image/jpeg", "image/png", "image/gif"] as const;
+export const SUPPORTED_VIDEO_MIME = ["video/h263", "video/x-m4v", "video/mp4", "video/mpeg", "video/webm"] as const;
+
 export const SAFE_ZONE_RULES = {
   /**
    * Default central safe zone for this MVP: central 60% of width and height

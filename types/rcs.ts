@@ -157,3 +157,27 @@ export interface OverlayToggles {
   showCropArea: boolean;
   showTextLineLimits: boolean;
 }
+
+// ── Functional compliance (the API's hard limits — a 422 if exceeded) ──
+export type FunctionalLimitId =
+  | "mediaType"
+  | "titleLength"
+  | "descriptionLength"
+  | "suggestionCount"
+  | "labelLength"
+  | "thumbnailSize"
+  | "openUrlLength"
+  | "emptyCard";
+
+export interface FunctionalViolation {
+  limit: FunctionalLimitId;
+  message: string;
+  actual: string | number;
+  max?: string | number;
+  citation: string;
+}
+
+export interface FunctionalResult {
+  passes: boolean;
+  violations: FunctionalViolation[];
+}
