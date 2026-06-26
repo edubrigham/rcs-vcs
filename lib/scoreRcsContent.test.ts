@@ -14,7 +14,7 @@ const CLEAN: RcsContent = {
   description: "Free delivery and setup.",
   imageUrl: "x",
   imageMetadata: { width: 1620, height: 1080, aspectRatio: 1620 / 1080 },
-  actions: [{ id: "a", type: "openUrl", label: "View product", value: "https://x.example", primary: true }],
+  actions: [{ id: "a", type: "openUrl", label: "View product", value: "https://x.example" }],
   focalPoint: { x: 0.5, y: 0.5 },
   cardFormat: "tall",
 };
@@ -33,7 +33,7 @@ describe("scoreActions", () => {
     const r = scoreActions({
       ...CLEAN,
       actions: [
-        { id: "1", type: "openUrl", label: "Buy", value: "https://x", primary: true },
+        { id: "1", type: "openUrl", label: "Buy", value: "https://x" },
         { id: "2", type: "dial", label: "Call", value: "+3220000000" },
       ],
     });
@@ -45,7 +45,7 @@ describe("scoreActions", () => {
     const r = scoreActions({
       ...CLEAN,
       actions: [
-        { id: "1", type: "openUrl", label: "Buy", value: "https://x", primary: true },
+        { id: "1", type: "openUrl", label: "Buy", value: "https://x" },
         { id: "2", type: "dial", label: "Call", value: "+3220000000" },
         { id: "3", type: "openUrl", label: "More", value: "https://x/more" },
       ],
@@ -70,7 +70,6 @@ describe("scoreActions", () => {
           type: "openUrl",
           label: "This label is definitely way too long for a suggestion",
           value: "https://x",
-          primary: true,
         },
       ],
     });

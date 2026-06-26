@@ -63,7 +63,7 @@ export const DEFAULT_CONTENT: RcsContent = {
     aspectRatio: SAMPLE_W / SAMPLE_H,
   },
   actions: [
-    { id: "a1", type: "openUrl", label: "Pre-order now", value: "https://naxai.example/pulse-ultra", primary: true },
+    { id: "a1", type: "openUrl", label: "Pre-order now", value: "https://naxai.example/pulse-ultra" },
     { id: "a2", type: "dial", label: "Call a store advisor for details", value: "+3225550123" },
     { id: "a3", type: "reply", label: "Send me more info", value: "MORE_INFO" },
   ],

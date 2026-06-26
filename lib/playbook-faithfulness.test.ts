@@ -13,7 +13,7 @@ const CLEAN: RcsContent = {
   description: "Free delivery and setup.",
   imageUrl: "x",
   imageMetadata: { width: 1620, height: 1080, aspectRatio: 1620 / 1080 },
-  actions: [{ id: "a", type: "openUrl", label: "View product", value: "https://x.example", primary: true }],
+  actions: [{ id: "a", type: "openUrl", label: "View product", value: "https://x.example" }],
   focalPoint: { x: 0.5, y: 0.5 },
   cardFormat: "tall",
 };
@@ -65,7 +65,7 @@ describe("action-after-reply ordering is penalised (GAP-1, s21)", () => {
     ...CLEAN,
     actions: [
       { id: "r", type: "reply", label: "Maybe later", value: "LATER" },
-      { id: "a", type: "openUrl", label: "Buy now", value: "https://x", primary: true },
+      { id: "a", type: "openUrl", label: "Buy now", value: "https://x" },
     ],
   };
   it("warns and penalises iOS when an action sits after a reply", () => {
@@ -86,7 +86,7 @@ describe("action-after-reply ordering is penalised (GAP-1, s21)", () => {
 describe("openUrl https check (RFC 3986 case-insensitive)", () => {
   const withUrl = (value: string): RcsContent => ({
     ...CLEAN,
-    actions: [{ id: "a", type: "openUrl", label: "Go", value, primary: true }],
+    actions: [{ id: "a", type: "openUrl", label: "Go", value }],
   });
   it("flags http:// but not HTTPS://", () => {
     expect(scoreActions(withUrl("http://x")).warnings.some((w) => /https/.test(w.message))).toBe(true);
@@ -99,11 +99,11 @@ describe("suggestion boundaries", () => {
   const acts = (...a: RcsContent["actions"]): RcsContent => ({ ...CLEAN, actions: a });
   it("2 CTAs → no iOS dropdown; 3 CTAs → dropdown", () => {
     const two = acts(
-      { id: "1", type: "openUrl", label: "Buy", value: "https://x", primary: true },
+      { id: "1", type: "openUrl", label: "Buy", value: "https://x" },
       { id: "2", type: "dial", label: "Call", value: "+3220000000" },
     );
     const three = acts(
-      { id: "1", type: "openUrl", label: "Buy", value: "https://x", primary: true },
+      { id: "1", type: "openUrl", label: "Buy", value: "https://x" },
       { id: "2", type: "dial", label: "Call", value: "+3220000000" },
       { id: "3", type: "openUrl", label: "More", value: "https://x/m" },
     );
@@ -111,15 +111,15 @@ describe("suggestion boundaries", () => {
     expect(scoreActions(three).warnings.some((w) => /dropdown/.test(w.message))).toBe(true);
   });
   it("25-char label OK, 26 flagged", () => {
-    const ok = acts({ id: "1", type: "openUrl", label: "x".repeat(25), value: "https://x", primary: true });
-    const bad = acts({ id: "1", type: "openUrl", label: "x".repeat(26), value: "https://x", primary: true });
+    const ok = acts({ id: "1", type: "openUrl", label: "x".repeat(25), value: "https://x" });
+    const bad = acts({ id: "1", type: "openUrl", label: "x".repeat(26), value: "https://x" });
     expect(scoreActions(ok).warnings.some((w) => /25-character/.test(w.message))).toBe(false);
     expect(scoreActions(bad).warnings.some((w) => /25-character/.test(w.message))).toBe(true);
   });
   it("1 action + 3 replies = clean; + 4 replies = reply-cap + 4-total criticals", () => {
     const mk = (n: number) =>
       acts(
-        { id: "a", type: "openUrl", label: "Buy", value: "https://x", primary: true },
+        { id: "a", type: "openUrl", label: "Buy", value: "https://x" },
         ...Array.from({ length: n }, (_, i) => ({
           id: `r${i}`,
           type: "reply" as const,

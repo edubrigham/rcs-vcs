@@ -23,7 +23,7 @@ const CLEAN: RcsContent = {
   description: "Free delivery.",
   imageUrl: "x",
   imageMetadata: { width: 1620, height: 1080, aspectRatio: 1.5 },
-  actions: [{ id: "a", type: "openUrl", label: "View", value: "https://x", primary: true }],
+  actions: [{ id: "a", type: "openUrl", label: "View", value: "https://x" }],
   focalPoint: { x: 0.5, y: 0.5 },
   cardFormat: "tall",
 };
@@ -64,7 +64,7 @@ describe("suggestion ordering & format (s21, s13)", () => {
       ...CLEAN,
       actions: [
         { id: "r", type: "reply", label: "Later", value: "L" },
-        { id: "a", type: "openUrl", label: "Buy", value: "https://x", primary: true },
+        { id: "a", type: "openUrl", label: "Buy", value: "https://x" },
       ],
     };
     const out = improveRcsContent(replyFirst, scoreRcsContent(replyFirst));
