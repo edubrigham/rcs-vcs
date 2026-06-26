@@ -1,4 +1,4 @@
-import type { FocalPoint, MediaIntrospection, StandaloneRichCard } from "@/types/rcs";
+import type { StandaloneRichCard } from "@/types/rcs";
 
 export class BadRequestError extends Error {
   constructor(message: string) {
@@ -7,35 +7,22 @@ export class BadRequestError extends Error {
   }
 }
 
-export interface CardRequest {
-  card: StandaloneRichCard;
-  media?: MediaIntrospection;
-  focal?: FocalPoint;
-}
-
 /**
- * Light structural guard for the scoring endpoints' shared body shape. Deeper
- * RCS-limit validity is delegated to validateFunctional. Throws BadRequestError
- * (→ HTTP 400) on a malformed shape.
+ * Parse the request body as an RCS `rcsContentBody` standalone rich card — the
+ * production API input (CIO: "the rcsContentBody is passed to the Simulator API
+ * in the Input"). Light structural guard; deeper RCS-limit validity is delegated
+ * to validateFunctional. Throws BadRequestError (→ HTTP 400) on a malformed shape.
  */
-export function parseCardBody(body: unknown): CardRequest {
+export function parseRcsContentBody(body: unknown): StandaloneRichCard {
   if (typeof body !== "object" || body === null) {
-    throw new BadRequestError("Request body must be a JSON object.");
+    throw new BadRequestError("Request body must be a JSON object (an rcsContentBody).");
   }
-  const b = body as Record<string, unknown>;
-  const card = b.card as Record<string, unknown> | undefined;
-  if (typeof card !== "object" || card === null) {
-    throw new BadRequestError("Body must include a 'card' object.");
+  const c = body as Record<string, unknown>;
+  if (c.type !== "standaloneRichCard") {
+    throw new BadRequestError("Body must be an rcsContentBody with type 'standaloneRichCard'.");
   }
-  if (card.type !== "standaloneRichCard") {
-    throw new BadRequestError("card.type must be 'standaloneRichCard'.");
+  if (typeof c.cardContent !== "object" || c.cardContent === null) {
+    throw new BadRequestError("cardContent is required.");
   }
-  if (typeof card.cardContent !== "object" || card.cardContent === null) {
-    throw new BadRequestError("card.cardContent is required.");
-  }
-  return {
-    card: card as unknown as StandaloneRichCard,
-    media: b.media as MediaIntrospection | undefined,
-    focal: b.focal as FocalPoint | undefined,
-  };
+  return body as StandaloneRichCard;
 }

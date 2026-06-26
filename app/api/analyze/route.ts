@@ -1,15 +1,18 @@
-import { parseCardBody } from "@/app/api/_lib/guards";
+import { parseRcsContentBody } from "@/app/api/_lib/guards";
+import { introspectCardMedia } from "@/app/api/_lib/fetchMedia";
 import { validateFunctional } from "@/lib/validateFunctional";
 import { scoreRcsContent } from "@/lib/scoreRcsContent";
 
 export const runtime = "nodejs";
+export const maxDuration = 10; // derives media by fetching the card's media URL
 
 export async function POST(request: Request) {
   try {
-    const { card, media, focal } = parseCardBody(await request.json());
+    const card = parseRcsContentBody(await request.json());
+    const media = await introspectCardMedia(card);
     return Response.json({
       functional: validateFunctional(card, media),
-      quality: scoreRcsContent(card, media, focal),
+      quality: scoreRcsContent(card, media),
     });
   } catch (e) {
     const err = e as Error;

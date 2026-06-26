@@ -1,5 +1,4 @@
 import type {
-  FocalPoint,
   FunctionalResult,
   ImprovedRcsContent,
   MediaIntrospection,
@@ -21,12 +20,6 @@ export interface TrafficEntry {
 }
 
 export type EmitTraffic = (entry: TrafficEntry) => void;
-
-export interface CardRequestBody {
-  card: StandaloneRichCard;
-  media?: MediaIntrospection;
-  focal?: FocalPoint;
-}
 
 export interface AnalyzeResponse {
   functional: FunctionalResult;
@@ -57,13 +50,14 @@ async function call(path: string, body: unknown, emit: EmitTraffic): Promise<{ o
   return { ok, data };
 }
 
-export async function analyzeCard(body: CardRequestBody, emit: EmitTraffic): Promise<AnalyzeResponse | null> {
-  const { ok, data } = await call("/api/analyze", body, emit);
+// Body is the rcsContentBody (the card) — media is derived server-side; no focal.
+export async function analyzeCard(card: StandaloneRichCard, emit: EmitTraffic): Promise<AnalyzeResponse | null> {
+  const { ok, data } = await call("/api/analyze", card, emit);
   return ok ? (data as AnalyzeResponse) : null;
 }
 
-export async function improveCard(body: CardRequestBody, emit: EmitTraffic): Promise<ImprovedRcsContent | null> {
-  const { ok, data } = await call("/api/improve", body, emit);
+export async function improveCard(card: StandaloneRichCard, emit: EmitTraffic): Promise<ImprovedRcsContent | null> {
+  const { ok, data } = await call("/api/improve", card, emit);
   return ok ? (data as ImprovedRcsContent) : null;
 }
 

@@ -54,20 +54,7 @@ export default function Home() {
     <main className="mx-auto w-full max-w-[1500px] px-5 pb-24 pt-8">
       {/* ── Header: title row + centered step navigation ── */}
       <header className="mb-8 border-b border-line pb-6">
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-accent">
-            Naxai · RCS Lab
-          </p>
-          <div className="flex items-center gap-4">
-            <a href="/api-playground" className="font-mono text-[11px] text-muted transition hover:text-body">
-              API playground
-            </a>
-            <a href="/api-docs" className="font-mono text-[11px] text-accent hover:underline">
-              API docs ↗
-            </a>
-          </div>
-        </div>
-        <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-heading sm:text-4xl">
           RCS Visual Compatibility Simulator
         </h1>
 

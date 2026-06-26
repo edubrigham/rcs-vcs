@@ -30,6 +30,24 @@ scoreRcsContent(card: StandaloneRichCard, media?: MediaIntrospection, focal?: Fo
 - The improver `improveRcsContent(card, media, focal, score)` returns a native
   improved card + the relocated focal.
 
+### Production API contract (what you build)
+
+**The request body is the `rcsContentBody` (the card) — nothing else.** That is
+exactly the CIO's input ("the rcsContentBody is passed to the Simulator API in the
+Input"). Your API:
+
+1. accepts the `rcsContentBody`,
+2. **fetches `cardContent.media.contentInfo.fileUrl` itself** to derive `media`
+   (size/dimensions — the CIO's "fetch the URL" ask), then
+3. calls the kernel. **`focal` is not an input** — the scorer centers the subject;
+   vision-based subject detection is a future phase.
+
+The kernel functions take pre-fetched `media`/`focal` only so the kernel stays
+pure and I/O-free — your API wraps them. The reference endpoints
+`app/api/{validate,score,improve,analyze}/route.ts` do exactly this, deriving
+media via `app/api/_lib/fetchMedia.ts`; `docs/scoring-api.openapi.json` documents
+the contract (input = `rcsContentBody`, media derived, no focal).
+
 ## 3. Model ↔ OpenAPI mapping
 
 The kernel types in `types/rcs.ts` mirror `docs/rcs-broadcasts.yaml` 1:1:
@@ -82,3 +100,20 @@ npx vitest run lib/__vectors__   # regenerate/verify the reference snapshots
 ```
 
 The full kernel suite (`npx vitest run`) is the behavioral spec; keep it green.
+
+## 7. Mandate coverage (what the CIO asked → where it lives)
+
+| CIO ask | Delivered | Where |
+|---|---|---|
+| **Specs for API input + output**, based on the RCS Broadcast API (`rcsContentBody` is the input) | Input = `rcsContentBody` (mirrored 1:1, verified); output = the scoring I/O | `docs/rcs-broadcasts.yaml` (input source) · `docs/scoring-api.openapi.json` (I/O) · `types/rcs.ts` |
+| **Fetch URL (images/videos) for size/dimensions** | `introspectMedia` (images: dims + size; video: type + size, header-only) + SSRF-guarded fetch, used internally by the scoring endpoints | `lib/media/introspect.ts` · `app/api/_lib/fetchMedia.ts` · `app/api/media-info/route.ts` |
+| **Extra rules from the Google RBM rich-cards guide** | Canonical heights 112/168/264, vertical aspect set {2:1,16:9,7:3} nearest-of-set, supported-MIME list, file-size/animated-GIF checks (cited `RBM rich-cards`) | `lib/rcsRules.ts` · `lib/validateFunctional.ts` · `lib/scoreRcsContent.ts` |
+| **Port-ready code for the transfer** | Pure kernel + golden vectors (parity) + this guide | `lib/` · `lib/__vectors__/` · `docs/PORTING.md` |
+
+**Scoped deferrals (deliberate, agreed):** the `carouselRichCard` arm of
+`rcsContentBody` is future work (Spec 2) — scoring covers `messageText` +
+`standaloneRichCard`; video introspection is lightweight (type + size, no pixel
+dimensions). **Phase 2** (AI-assistant content creation) is out of the current
+mandate. The `app/` + `components/` SPA — including the `/api-playground` demo and
+the `/api-docs` reference — is the disposable shell for CIO/stakeholder
+confirmation; it is **not** ported.

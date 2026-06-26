@@ -3,53 +3,58 @@
   "info": {
     "title": "RCS Compatibility Scoring API",
     "version": "0.1.0",
-    "description": "Two axes over a Naxai standaloneRichCard: functional compliance (would the sendRCS API accept it — a 422) and quality (how well it renders on iOS vs Android). Distinct from the upstream Naxai sendRCS contract (docs/rcs-broadcasts.yaml)."
+    "description": "Pre-flight scoring for a Naxai RCS rich card. The INPUT is the Naxai `rcsContentBody` (the `standaloneRichCard` arm) — the same object passed to RCS Broadcasts' sendRCS. The API fetches the media URL in `contentInfo` INTERNALLY to derive size/dimensions (no media object is passed in). There is no focal point in the input — the scorer centers the subject (vision-based subject detection is a future phase). Two axes: functional compliance (would sendRCS accept it — a 422) and quality (iOS vs Android rendering). Distinct from the upstream sendRCS contract (docs/rcs-broadcasts.yaml)."
   },
   "servers": [{ "url": "/api" }],
   "paths": {
     "/validate": {
       "post": {
-        "summary": "Functional compliance (would the API accept this?)",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "summary": "Functional compliance — would sendRCS accept this rcsContentBody?",
+        "description": "Body is the `rcsContentBody` (standaloneRichCard). Media size/dimensions are derived by fetching `cardContent.media.contentInfo.fileUrl`.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StandaloneRichCard" }, "examples": { "card": { "$ref": "#/components/examples/card" } } } } },
         "responses": {
           "200": { "description": "Functional result", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FunctionalResult" } } } },
-          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+          "400": { "description": "Body is not a valid rcsContentBody", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
         }
       }
     },
     "/score": {
       "post": {
         "summary": "Quality score (0-100, iOS vs Android)",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "description": "Body is the `rcsContentBody`. Media is derived internally; no focal point — the scorer centers the subject.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StandaloneRichCard" }, "examples": { "card": { "$ref": "#/components/examples/card" } } } } },
         "responses": {
           "200": { "description": "Score result", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoreResult" } } } },
-          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+          "400": { "description": "Body is not a valid rcsContentBody", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
         }
       }
     },
     "/improve": {
       "post": {
         "summary": "Deterministic improved card",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "description": "Body is the `rcsContentBody`. Returns an improved standaloneRichCard plus the changes applied.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StandaloneRichCard" }, "examples": { "card": { "$ref": "#/components/examples/card" } } } } },
         "responses": {
           "200": { "description": "Improved card", "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } } },
-          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+          "400": { "description": "Body is not a valid rcsContentBody", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
         }
       }
     },
     "/analyze": {
       "post": {
         "summary": "Functional + quality in one call",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardRequest" }, "examples": { "sample": { "$ref": "#/components/examples/sample" } } } } },
+        "description": "Body is the `rcsContentBody`. The convenient one-shot: returns both axes.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StandaloneRichCard" }, "examples": { "card": { "$ref": "#/components/examples/card" } } } } },
         "responses": {
           "200": { "description": "Both axes", "content": { "application/json": { "schema": { "type": "object", "properties": { "functional": { "$ref": "#/components/schemas/FunctionalResult" }, "quality": { "$ref": "#/components/schemas/ScoreResult" } } } } } },
-          "400": { "description": "Malformed body", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+          "400": { "description": "Body is not a valid rcsContentBody", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
         }
       }
     },
     "/media-info": {
       "post": {
         "summary": "Introspect a public media URL (SSRF-guarded, header bytes only)",
+        "description": "The media-introspection utility the scoring endpoints use internally; exposed for the demo editor. Not part of the scoring input.",
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["url"], "properties": { "url": { "type": "string", "format": "uri" }, "thumbnailUrl": { "type": "string", "format": "uri" } } }, "example": { "url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/JPEG_example_flower.jpg" } } } },
         "responses": {
           "200": { "description": "Media introspection", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MediaIntrospection" } } } },
@@ -60,30 +65,27 @@
   },
   "components": {
     "examples": {
-      "sample": {
+      "card": {
+        "summary": "A standalone rich card (rcsContentBody)",
         "value": {
-          "card": {
-            "type": "standaloneRichCard",
-            "cardOrientation": "VERTICAL",
-            "cardContent": {
-              "title": "Spring Collection",
-              "description": "New arrivals, free returns.",
-              "media": { "height": "TALL", "contentInfo": { "fileUrl": "https://example.com/a.jpg" } },
-              "suggestions": [
-                { "type": "action", "text": "Shop now", "action": { "type": "openUrlAction", "url": "https://example.com/shop" } },
-                { "type": "reply", "text": "Notify me" }
-              ]
-            }
-          },
-          "media": { "mediaType": "image", "mimeType": "image/jpeg", "fileSizeBytes": 240000, "width": 1080, "height": 1920, "aspectRatio": 0.5625 },
-          "focal": { "x": 0.5, "y": 0.5 }
+          "type": "standaloneRichCard",
+          "cardOrientation": "VERTICAL",
+          "cardContent": {
+            "title": "Spring Collection",
+            "description": "New arrivals, free returns.",
+            "media": { "height": "TALL", "contentInfo": { "fileUrl": "https://example.com/a.jpg" } },
+            "suggestions": [
+              { "type": "action", "text": "Shop now", "action": { "type": "openUrlAction", "url": "https://example.com/shop" } },
+              { "type": "reply", "text": "Notify me" }
+            ]
+          }
         }
       }
     },
     "schemas": {
-      "FocalPoint": { "type": "object", "properties": { "x": { "type": "number" }, "y": { "type": "number" } } },
       "MediaIntrospection": {
         "type": "object",
+        "description": "Derived by the API from the media URL — NOT part of the rcsContentBody input.",
         "required": ["mediaType", "mimeType", "fileSizeBytes"],
         "properties": {
           "mediaType": { "type": "string", "enum": ["image", "video"] },
@@ -98,29 +100,21 @@
       "CardContent": {
         "type": "object",
         "properties": {
-          "title": { "type": "string" },
-          "description": { "type": "string" },
-          "media": { "type": "object", "properties": { "height": { "type": "string", "enum": ["SHORT", "MEDIUM", "TALL"] }, "contentInfo": { "type": "object", "properties": { "fileUrl": { "type": "string" }, "thumbnailUrl": { "type": "string" } } } } },
-          "suggestions": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+          "title": { "type": "string", "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 2000 },
+          "media": { "type": "object", "properties": { "height": { "type": "string", "enum": ["SHORT", "MEDIUM", "TALL"] }, "contentInfo": { "type": "object", "properties": { "fileUrl": { "type": "string", "format": "uri" }, "thumbnailUrl": { "type": "string", "format": "uri" } } } } },
+          "suggestions": { "type": "array", "maxItems": 4, "items": { "type": "object", "additionalProperties": true } }
         }
       },
       "StandaloneRichCard": {
         "type": "object",
+        "description": "The Naxai rcsContentBody standaloneRichCard arm — the API input.",
         "required": ["type", "cardOrientation", "cardContent"],
         "properties": {
           "type": { "type": "string", "const": "standaloneRichCard" },
           "cardOrientation": { "type": "string", "enum": ["HORIZONTAL", "VERTICAL"] },
           "thumbnailImageAlignment": { "type": "string", "enum": ["LEFT", "RIGHT"] },
           "cardContent": { "$ref": "#/components/schemas/CardContent" }
-        }
-      },
-      "CardRequest": {
-        "type": "object",
-        "required": ["card"],
-        "properties": {
-          "card": { "$ref": "#/components/schemas/StandaloneRichCard" },
-          "media": { "$ref": "#/components/schemas/MediaIntrospection" },
-          "focal": { "$ref": "#/components/schemas/FocalPoint" }
         }
       },
       "FunctionalViolation": {

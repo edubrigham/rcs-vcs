@@ -30,6 +30,8 @@ interface RcsInputPanelProps {
   onMediaUrlFetched: (url: string, media: MediaIntrospection) => void;
   /** Override the media fetcher (the playground injects a traffic-logged one). */
   fetchMedia?: (url: string) => Promise<MediaIntrospection>;
+  /** Hide the file-upload / sample controls (the API page uses URL fetch only). */
+  hideUpload?: boolean;
   /** Read-only here: drives the focal-point editor's safe-zone overlay. */
   toggles: OverlayToggles;
 }
@@ -53,6 +55,7 @@ export default function RcsInputPanel({
   onContentChange,
   onMediaUrlFetched,
   fetchMedia,
+  hideUpload,
   toggles,
 }: RcsInputPanelProps) {
   const fileInputId = useId();
@@ -133,6 +136,7 @@ export default function RcsInputPanel({
     <div className="flex flex-col gap-5">
       {/* ── Media ── */}
       <Section title="1 · Media">
+        {!hideUpload && (
         <div className="flex items-center gap-2">
           <label
             htmlFor={fileInputId}
@@ -181,13 +185,14 @@ export default function RcsInputPanel({
             </svg>
           </button>
         </div>
+        )}
 
         <div className="mt-2 flex items-center gap-2">
           <input
             type="url"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="…or paste a public image/video URL"
+            placeholder={hideUpload ? "Paste a public image/video URL" : "…or paste a public image/video URL"}
             className="min-w-0 flex-1 rounded-lg border border-line bg-field px-3 py-1.5 text-xs text-heading outline-none placeholder:text-faint focus:border-sky-500/60"
           />
           <button
