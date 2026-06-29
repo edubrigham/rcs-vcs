@@ -1,61 +1,61 @@
-# Porting Guide — RCS Compatibility Scoring → Naxai private API
+# Porting Contract — RCS Scoring Kernel → Naxai Private API
 
-This PoC is a **port-ready reference**, not the production service. The Naxai
-Core team ports the **logic kernel** (`lib/`) into the private API; the Vercel
-SPA (`app/`, `components/`) is a disposable demo shell you can ignore.
+Implementation brief for porting the deterministic RCS scoring kernel into a
+private Naxai API. Client/stakeholder traceability is in
+[`docs/MANDATE.md`](MANDATE.md); rationale/background is in
+`docs/SCORING-AND-ARCHITECTURE.md`. Neither is required to do the port.
 
-## 1. What you need (read these; ignore the rest)
+## 1. Scope
 
-- **`lib/`** — the pure, framework-free kernel to re-implement. No React/Next, no
-  network/clock/randomness: same input → same output, translates to any language.
-  **Start here.**
-- **`docs/scoring-api.openapi.json`** — your API's I/O contract (input =
-  `rcsContentBody`; see §2).
-- **`docs/rcs-broadcasts.yaml`** — the Naxai input definition (`rcsContentBody`).
-- **`lib/__vectors__/`** — parity vectors: same input → identical output (§6).
+- **Port:** everything in **`lib/`** — pure, framework-free TypeScript (no
+  React/Next, no network, no clock, no randomness; same input → same output, so it
+  translates to any language).
+- **Do not port:** `app/` and `components/` (the Vercel UI and demo endpoints).
+  Use `app/api/*` only as reference wrappers (§4).
+- **Reference inputs:**
+  - `docs/scoring-api.openapi.json` — the API I/O contract.
+  - `docs/rcs-broadcasts.yaml` — the Naxai `rcsContentBody` definition.
+  - `lib/__vectors__/` — golden parity vectors (§7).
 
-**Ignore** (not ported, not required): `app/` + `components/` (the disposable
-Vercel demo/SPA), `docs/superpowers/` (our process notes), and
-`docs/SCORING-AND-ARCHITECTURE.md` (optional rationale/background).
+## 2. Required API contract
 
-## 2. The two entry points
+- The request body **must be exactly the `rcsContentBody`** — the
+  `standaloneRichCard` arm (§3). No wrapper object, no `media` field, no focal point.
+- The API **must fetch `cardContent.media.contentInfo.fileUrl` internally** to
+  derive media metadata before scoring (§5). Media is never a caller input.
+- There is no focal point in the input; the scorer centers the image subject.
+- Responses are the functional result and/or the quality score — schemas in
+  `docs/scoring-api.openapi.json`.
+
+## 3. Required kernel functions
+
+Port these from `lib/`:
 
 ```ts
-// "Will the API accept this?" — binary, sourced from the sendRCS OpenAPI (a 422).
 validateFunctional(card: StandaloneRichCard, media?: MediaIntrospection): FunctionalResult
-
-// "Will it render well on iOS vs Android?" — gradual 0–100, sourced from the UX playbooks.
 scoreRcsContent(card: StandaloneRichCard, media?: MediaIntrospection, focal?: FocalPoint): ScoreResult
 ```
 
-- `card` is the Naxai `rcsContentBody` **standaloneRichCard** arm (see §3).
-- `media` is **derived** by fetching the media URL (§4) — NOT part of the payload.
-- `focal` is a simulator stand-in for vision-based subject detection (Phase 2);
-  omit it and the scorer centers the subject.
-- The improver `improveRcsContent(card, media, focal, score)` returns a native
-  improved card + the relocated focal.
+- **`validateFunctional`** — binary compliance. Hard limits (the values that make
+  `sendRCS` return 422): title ≤ 200, description ≤ 2000, ≤ 4 suggestions, label
+  ≤ 25, open-URL ≤ 2048, supported MIME, thumbnail ≤ 100 KB.
+- **`scoreRcsContent`** — 0–100 quality (iOS vs Android rendering).
 
-### Production API contract (what you build)
+Optional:
 
-**The request body is the `rcsContentBody` (the card) — nothing else.** That is
-exactly the CIO's input ("the rcsContentBody is passed to the Simulator API in the
-Input"). Your API:
+```ts
+improveRcsContent(card, media, focal, scoreResult): ImprovedRcsContent
+```
 
-1. accepts the `rcsContentBody`,
-2. **fetches `cardContent.media.contentInfo.fileUrl` itself** to derive `media`
-   (size/dimensions — the CIO's "fetch the URL" ask), then
-3. calls the kernel. **`focal` is not an input** — the scorer centers the subject;
-   vision-based subject detection is a future phase.
+- Port **only if** the production API exposes an `/improve` endpoint.
 
-The kernel functions take pre-fetched `media`/`focal` only so the kernel stays
-pure and I/O-free — your API wraps them. The reference endpoints
-`app/api/{validate,score,improve,analyze}/route.ts` do exactly this, deriving
-media via `app/api/_lib/fetchMedia.ts`; `docs/scoring-api.openapi.json` documents
-the contract (input = `rcsContentBody`, media derived, no focal).
+**Purity boundary:** these functions take **already-derived** `media`/`focal` and
+perform no I/O. The API wrapper fetches media (§5), then calls them. `focal` is
+optional — omit it and the scorer centers the subject.
 
-## 3. Model ↔ OpenAPI mapping
+### Model ↔ OpenAPI mapping
 
-The kernel types in `types/rcs.ts` mirror `docs/rcs-broadcasts.yaml` 1:1:
+`types/rcs.ts` mirrors `docs/rcs-broadcasts.yaml`:
 
 | Kernel type | OpenAPI schema |
 |---|---|
@@ -63,48 +63,58 @@ The kernel types in `types/rcs.ts` mirror `docs/rcs-broadcasts.yaml` 1:1:
 | `CardContent` | `cardContent` (`title`, `description`, `media`, `suggestions`) |
 | `Media` / `ContentInfo` | `media` (`height` SHORT/MEDIUM/TALL) / `contentInfo` (`fileUrl`, `thumbnailUrl`) |
 | `Suggestion` = `SuggestedReply \| SuggestedAction` | `suggestions[]` (`reply` / `action` + `Action` union) |
-| `MediaIntrospection` | *derived* — not in the payload |
+| `MediaIntrospection` | derived by the API — not in the input |
 
-`RcsContentBody = MessageText | StandaloneRichCard` (carousel arm → future work).
+## 4. Reference wrapper
 
-## 4. Media introspection algorithm
+`app/api/{validate,score,improve,analyze}/route.ts` + `app/api/_lib/fetchMedia.ts`
+demonstrate the production shape: parse `rcsContentBody` → fetch media (§5) → call
+the kernel → return JSON. The kernel stays I/O-free; the wrapper owns the fetch.
 
-`lib/media/introspect.ts` is pure (`bytes + headers → MediaIntrospection`):
+## 5. Media metadata behavior
 
-- **Images:** dimensions via `image-size` on the file's **header bytes**. JPEG
-  dimensions can sit past the first KB (large EXIF) — read ~64 KB and widen once
-  on a truncated-buffer throw.
-- **Video:** **header-only** — type (from `content-type`) + size. No dimension
-  parsing; no guide rule needs video dimensions.
-- **Fetch safely:** use an HTTP Range request (never download whole files) behind
-  an SSRF guard (https-only, validate the resolved IP, cap bytes + timeout).
-  Working reference: `app/api/_lib/fetchMedia.ts` (+ `lib/media/ssrfGuard.ts`) —
-  replicate the *intent* in your stack; you don't need our exact IP-pinning code.
+**Required behavior (must preserve):**
 
-## 5. Source precedence (when sources disagree)
+- Fetch only enough bytes to determine metadata; do not download whole media files.
+- Images: derive MIME type, file size, width, height.
+- Videos: derive MIME type and file size only (no dimensions).
+- Apply an SSRF guard: https-only, validate the resolved IP, cap bytes, enforce a
+  timeout.
+- If the media URL is absent or unfetchable, score without media metadata.
 
-- **Functional hard limits** → the Naxai **sendRCS OpenAPI** wins (it's what 422s).
-- **Canonical dimensions** (heights 112/168/264, the supported-MIME list, the
-  vertical aspect set) → the **Google RBM rich-cards guide** wins.
-- **Rendering/UX heuristics** (cropping, safe zones, iOS-vs-Android) → the **UX
-  playbooks** win (`skills/rcs-playbook-rules/`).
-- The guide lists vertical aspects `{2:1, 16:9, 7:3}` for *any* vertical card and
-  does **not** bind a ratio to a height — score against the **nearest** of the
-  set; never invent a per-height map.
+**Reference implementation detail (PoC-specific, not binding):**
 
-## 6. The parity contract: golden vectors
+- The PoC fetches via an HTTP Range request and reads ~64 KB, retrying once for
+  JPEGs with large headers. See `lib/media/introspect.ts` (byte parsing) and
+  `app/api/_lib/fetchMedia.ts` (fetch + SSRF guard).
 
-`lib/__vectors__/` holds representative `rcsContentBody` inputs and the snapshot
-of their `{ functional, quality }` output. **Run the same inputs through your
-port and assert identical output** — that proves parity with this reference.
+## 6. Rule precedence (conflicting specs)
+
+When sources disagree, the winner is:
+
+1. **Functional hard limits** → the Naxai `sendRCS` OpenAPI (it defines the 422).
+2. **Canonical dimensions** (media heights 112/168/264, supported-MIME list,
+   vertical aspect set) → the Google RBM rich-cards guide.
+3. **Rendering/UX heuristics** (cropping, safe zones, iOS-vs-Android) → the UX
+   playbooks (`skills/rcs-playbook-rules/`).
+
+Do not create a height-to-aspect-ratio mapping. Score vertical media against the
+**nearest** supported aspect ratio from `{2:1, 16:9, 7:3}`.
+
+## 7. Parity tests (definition of done)
+
+`lib/__vectors__/` holds representative `rcsContentBody` inputs and the snapshot of
+their `{ functional, quality }` output. **Run the same inputs through the port and
+assert identical output.** The full kernel suite (`npx vitest run`) is the
+behavioral spec; keep it green.
 
 ```bash
-npx vitest run lib/__vectors__   # regenerate/verify the reference snapshots
+npx vitest run lib/__vectors__   # verify the reference snapshots
 ```
 
-The full kernel suite (`npx vitest run`) is the behavioral spec; keep it green.
+## 8. Out of scope
 
----
-
-*Project-level mandate coverage (CIO asks → deliverables) lives in
-[`docs/MANDATE.md`](MANDATE.md) — not needed to do the port.*
+- **Carousel** (`carouselRichCard` arm of `rcsContentBody`) — the kernel handles
+  the `standaloneRichCard` arm; carousel scoring is a later spec.
+- **Video dimensions** (width/height) — videos yield MIME type + file size only.
+- **AI-assistant content creation** (Phase 2).
