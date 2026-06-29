@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent skills (npx skills add — local tooling, not part of the handoff)
+.agents/
+.claude/
+skills/
+skills-lock.json
