@@ -2,8 +2,8 @@
 
 /**
  * Wizard navigation: 1 Draft → 2 Playbook Pass → 3 LLM Enhanced → 4 Agent Enhanced.
- * Sits on its own centered row (~2/3 width) below the page title.
- * Step 3 is the future Anthropic Agent SDK phase — visible but disabled.
+ * A compact, contained segmented stepper that sits left-aligned below the page
+ * title. Steps 3 and 4 are future phases — visible but disabled.
  */
 
 import Link from "next/link";
@@ -17,13 +17,30 @@ const STEPS = [
   { n: 4, label: "Agent Enhanced", href: null },
 ] as const;
 
+function Chevron() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5 shrink-0 text-faint"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
+}
+
 export default function StepNav() {
   const pathname = usePathname();
   const activeIndex = pathname === "/improve" ? 1 : 0;
 
   return (
-    <nav aria-label="Workflow steps" className="mt-5 flex justify-center">
-      <ol className="flex w-full items-center md:w-2/3">
+    <nav aria-label="Workflow steps" className="mt-6">
+      <ol className="flex flex-wrap items-center gap-x-1 gap-y-2">
         {STEPS.map((step, i) => {
           const state =
             step.href === null
@@ -36,32 +53,32 @@ export default function StepNav() {
 
           const pillClass = {
             active:
-              "border-[var(--color-primary)] bg-panel-strong text-[var(--color-primary)]",
-            done: "border-[var(--color-secondary)] text-[var(--color-secondary)] hover:bg-panel-strong",
-            idle: "border-line bg-panel text-muted hover:border-line-strong",
-            soon: "cursor-not-allowed border-line bg-panel text-muted opacity-45",
+              "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+            done: "border-line bg-panel text-body hover:border-[var(--color-secondary)] hover:text-[var(--color-secondary)]",
+            idle: "border-line bg-panel text-muted hover:border-line-strong hover:text-body",
+            soon: "cursor-not-allowed border-line bg-panel text-muted opacity-50",
           }[state];
 
-          const numberClass = {
-            active: "border-[var(--color-primary)] bg-[var(--color-primary)] text-white",
-            done: "border-[var(--color-secondary)] text-[var(--color-secondary)]",
-            idle: "border-line-strong text-muted",
-            soon: "border-line-strong text-muted",
+          const badgeClass = {
+            active: "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]",
+            done: "bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)]",
+            idle: "border border-line-strong text-muted",
+            soon: "border border-line-strong text-muted",
           }[state];
 
           const pill = (
             <span
-              className={`flex w-full items-center justify-center gap-2 rounded-full border px-4 py-4 text-sm font-semibold transition ${pillClass}`}
+              className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-sm font-semibold transition ${pillClass}`}
               aria-current={state === "active" ? "step" : undefined}
             >
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-bold ${numberClass}`}
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold ${badgeClass}`}
               >
                 {state === "done" ? "✓" : step.n}
               </span>
-              {step.label}
+              <span className="whitespace-nowrap">{step.label}</span>
               {state === "soon" && (
-                <span className="rounded bg-panel-strong px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest">
+                <span className="rounded bg-panel-strong px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest text-muted">
                   SOON
                 </span>
               )}
@@ -70,10 +87,16 @@ export default function StepNav() {
 
           return (
             <Fragment key={step.n}>
-              {i > 0 && <span aria-hidden className="h-px w-7 shrink-0 bg-line-strong" />}
-              <li className="min-w-0 flex-1">
+              {i > 0 && (
+                <li aria-hidden className="px-0.5">
+                  <Chevron />
+                </li>
+              )}
+              <li>
                 {step.href !== null && state !== "active" ? (
-                  <Link href={step.href}>{pill}</Link>
+                  <Link href={step.href} className="block">
+                    {pill}
+                  </Link>
                 ) : (
                   pill
                 )}
